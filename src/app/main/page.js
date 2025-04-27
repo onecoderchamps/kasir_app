@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { ClockIcon, UserCircleIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 export default function Home() {
     const [cart, setCart] = useState([]);
@@ -138,11 +139,34 @@ export default function Home() {
 
     return (
         <main className="p-6">
-            <h1 className="text-3xl font-bold mb-6">POS Layanan</h1>
+            <header className="flex justify-between items-center mb-6">
+                {/* Kiri */}
+                <div className="text-2xl font-bold m-4">
+                    POS Cab Kalibata
+                </div>
+
+                {/* Kanan */}
+                <div className="flex gap-4 items-center text-gray-600">
+                    {/* History Icon */}
+                    <button title="Riwayat" className="hover:text-primary">
+                        <ClockIcon className="h-6 w-6" />
+                    </button>
+
+                    {/* Akun Icon */}
+                    <button title="Akun" className="hover:text-primary">
+                        <UserCircleIcon className="h-6 w-6" />
+                    </button>
+
+                    {/* Laporan Icon */}
+                    <button title="Laporan" className="hover:text-primary">
+                        <DocumentTextIcon className="h-6 w-6" />
+                    </button>
+                </div>
+            </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Produk */}
-                <div className="card bg-base-100 shadow-xl p-4 md:col-span-2">
+                <div className="p-4 md:col-span-2">
                     <h2 className="text-2xl font-semibold mb-4">Daftar Layanan</h2>
                     <div className="grid grid-cols-2 gap-4">
                         {products.map((product) => (
@@ -159,7 +183,7 @@ export default function Home() {
                 </div>
 
                 {/* Keranjang */}
-                <div className="card bg-base-100 shadow-xl flex flex-col h-[calc(100vh-5rem)] p-4 md:col-span-1">
+                <div className=" flex flex-col h-[calc(100vh-5rem)] p-4 md:col-span-1">
                     <h2 className="text-2xl font-semibold mb-4">Keranjang</h2>
 
                     <div className="flex-1 overflow-y-auto pr-2">

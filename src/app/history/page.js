@@ -40,6 +40,8 @@ export default function History() {
               <h2>STRUK PEMBAYARAN</h2>
               <div class="info"><span class="bold">ID:</span> ${tx.id}</div>
               <div class="info"><span class="bold">Tanggal:</span> ${tx.date}</div>
+              <div class="info"><span class="bold">Customer:</span> ${tx.customerName || '-'}</div>
+              <div class="info"><span class="bold">Ponsel:</span> ${tx.customerPhone || '-'}</div>
               <div class="divider"></div>
               <div class="info bold">Layanan:</div>
               <ul>
@@ -68,13 +70,13 @@ export default function History() {
         setTransactions(updatedTransactions);
         localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
     };
-    
-
 
     const exportExcel = () => {
         const data = transactions.map(tx => ({
             ID: tx.id,
             Tanggal: tx.date,
+            Customer: tx.customerName || '-',
+            Ponsel: tx.customerPhone || '-',
             Layanan: tx.cart.map(item => `${item.name} (x${item.qty})`).join(', '),
             Total: tx.total,
             'Metode Pembayaran': tx.paymentMethod,
@@ -118,6 +120,13 @@ export default function History() {
                             <div className="flex justify-between items-center mb-2">
                                 <div className="font-bold">ID: {tx.id}</div>
                                 <div className="text-sm text-gray-500">{tx.date}</div>
+                            </div>
+
+                            <div className="mb-2">
+                                <span className="font-semibold">Customer:</span> {tx.customerName || '-'}
+                            </div>
+                            <div className="mb-4">
+                                <span className="font-semibold">Ponsel:</span> {tx.customerPhone || '-'}
                             </div>
 
                             <div className="mb-4">
