@@ -248,7 +248,7 @@ export default function Home() {
                     </button>
 
                     {/* Laporan Icon */}
-                    <button title="Laporan" className="hover:text-primary cursor-pointer">
+                    <button title="Laporan" className="hover:text-primary cursor-pointer" onClick={() => window.open('/omset', '_blank')}>
                         <ChartBarIcon className="h-6 w-6" />
                     </button>
 
