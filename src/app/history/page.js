@@ -10,10 +10,10 @@ export default function History() {
         const saved = localStorage.getItem('transactions');
         if (saved) {
             const parsedTransactions = JSON.parse(saved);
-    
+
             // Sorting berdasarkan tanggal, terbaru di atas
             const sortedTransactions = parsedTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-            
+
             setTransactions(sortedTransactions);
         }
     }, []);
@@ -53,6 +53,10 @@ export default function History() {
                 ${tx.cart.map(item => `<li>${item.name} (x${item.qty}) - Rp ${item.price.toLocaleString()}</li>`).join('')}
               </ul>
               <div class="divider"></div>
+              ${tx.discount > 0 ? `
+                <div class="info"><span class="bold">Subtotal:</span> Rp ${tx.subtotal.toLocaleString()}</div>
+                <div class="info"><span class="bold">Diskon:</span> ${tx.coupon} - ${(tx.subtotal - tx.total).toLocaleString()}</div>
+              ` : ''}
               <div class="info"><span class="bold">Metode Pembayaran:</span> ${tx.paymentMethod}</div>
               ${tx.paymentMethod === 'Transfer' ? `
                 <div class="info"><span class="bold">Bank:</span> ${tx.bank?.name} (a.n ${tx.bank?.accountName})</div>
@@ -148,8 +152,19 @@ export default function History() {
                                 </ul>
                             </div>
 
+                            {tx?.discount !== 0 &&
+                                <>
+                                    <div className="mb-2">
+                                        <span className="font-semibold">SubTotal:</span> Rp {tx?.subtotal?.toLocaleString()}
+                                    </div>
+                                    <div className="mb-2">
+                                        <span className="font-semibold">Discount:</span>  {tx?.discount} %
+                                    </div>
+                                </>
+                            }
+
                             <div className="mb-2">
-                                <span className="font-semibold">Total:</span> Rp {tx.total.toLocaleString()}
+                                <span className="font-semibold">Total Bayar:</span> Rp {tx.total.toLocaleString()}
                             </div>
 
                             <div className="mb-2">

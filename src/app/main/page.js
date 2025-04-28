@@ -13,13 +13,69 @@ export default function Home() {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [selectedEDC, setSelectedEDC] = useState('');
+    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+    const [expandedCategories, setExpandedCategories] = useState({});
+    const [coupon, setCoupon] = useState('');
+    const [discount, setDiscount] = useState(0);
+
+    const [categories] = useState([
+        { id: 1, name: 'Spa', bg: 'bg-blue-400' },
+        { id: 2, name: 'Salon', bg: 'bg-blue-400' },
+        { id: 3, name: 'Barber and Kiddy Cut', bg: 'bg-blue-400' },
+        { id: 4, name: 'Hair MM', bg: 'bg-blue-400' },
+        { id: 5, name: 'Smoothing, Digital Perm & Keratine', bg: 'bg-blue-400' },
+    ]);
 
 
     const [products] = useState([
-        { id: 1, name: 'Cuci Mobil', price: 50000, bg: 'bg-blue-400' },
-        { id: 2, name: 'Salon Mobil', price: 150000, bg: 'bg-green-400' },
-        { id: 3, name: 'Ganti Oli', price: 80000, bg: 'bg-yellow-400' },
-        { id: 4, name: 'Cuci Motor', price: 30000, bg: 'bg-purple-400' },
+        {
+            id: 1,
+            name: 'Back Massage 30Mnt',
+            price: 75000,
+            bg: 'bg-blue-400',
+            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
+            idCategory: 1
+        },
+        {
+            id: 2,
+            name: 'Back Massage 60Mnt',
+            price: 130000,
+            bg: 'bg-blue-400',
+            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
+            idCategory: 1
+        },
+        {
+            id: 3,
+            name: 'Back Massage 90Mnt',
+            price: 180000,
+            bg: 'bg-blue-400',
+            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
+            idCategory: 1
+        },
+        {
+            id: 4,
+            name: 'Back Massage 120Mnt',
+            price: 220000,
+            bg: 'bg-blue-400',
+            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
+            idCategory: 1
+        },
+        {
+            id: 5,
+            name: 'Body Scrub',
+            price: 120000,
+            bg: 'bg-blue-400',
+            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
+            idCategory: 1
+        },
+        {
+            id: 6,
+            name: 'Hair Spa',
+            price: 250000,
+            bg: 'bg-blue-400',
+            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
+            idCategory: 1
+        },
     ]);
 
     const employees = [
@@ -62,6 +118,20 @@ export default function Home() {
         }
     };
 
+    const validateCoupon = () => {
+        // Misal kupon-kupon yang valid
+        if (coupon === 'ROYAL1') {
+            setDiscount(21.35);
+            alert('Kupon berhasil digunakan! Diskon 10%');
+        } else if (coupon === 'ROYAL2') {
+            setDiscount(20);
+            alert('Kupon berhasil digunakan! Diskon 20%');
+        } else {
+            setDiscount(0);
+            alert('Kupon tidak valid.');
+        }
+    };
+
     const incrementQty = (index) => {
         const updatedCart = [...cart];
         updatedCart[index].qty += 1;
@@ -78,7 +148,12 @@ export default function Home() {
         setCart(updatedCart);
     };
 
-    const total = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+    function roundUpToNearest(value, nearest) {
+        return Math.ceil(value / nearest) * nearest;
+    }
+
+    const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+    const total = roundUpToNearest(subtotal - (subtotal * discount / 100), 1000);
     const change = cashGiven ? parseInt(cashGiven) - total : 0;
 
     const handlePayment = () => {
@@ -104,6 +179,9 @@ export default function Home() {
             customerPhone,
             cart: cartWithTransactionId,
             total,
+            subtotal,
+            coupon,
+            discount,
             paymentMethod: selectedPayment,
             bank: selectedPayment === 'Transfer' ? selectedBank : selectedPayment === 'EDC' ? selectedEDC : null,
             cashGiven: selectedPayment === 'Tunai' ? cashGiven : null,
@@ -148,6 +226,8 @@ export default function Home() {
         setCustomerName('');
         setCustomerPhone('');
         setSelectedEDC('');
+        setDiscount(0);
+        setCoupon('');
         setShowModal(false);
         localStorage.removeItem('cart');
     };
@@ -163,7 +243,7 @@ export default function Home() {
                 {/* Kanan */}
                 <div className="flex gap-4 items-center text-gray-600">
                     {/* History Icon */}
-                    <button title="Riwayat" className="hover:text-primary cursor-pointer" onClick={() => router.push("/history")}>
+                    <button title="Riwayat" className="hover:text-primary cursor-pointer" onClick={() => window.open('/history', '_blank')}>
                         <ClockIcon className="h-6 w-6" />
                     </button>
 
@@ -182,23 +262,65 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Produk */}
                 <div className="p-4 md:col-span-2">
-                    <h2 className="text-2xl font-semibold mb-4">Daftar Layanan</h2>
-                    <div className="grid grid-cols-3 gap-4">
-                        {products.map((product) => (
-                            <div
-                                key={product.id}
-                                className={`p-4 rounded-lg text-white cursor-pointer text-center ${product.bg}`}
-                                onClick={() => addToCart(product)}
+                    <div className="flex gap-2 mb-4 overflow-x-auto">
+                        <button
+                            className={`btn btn-sm ${selectedCategoryId === null ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setSelectedCategoryId(null)}
+                        >
+                            Semua
+                        </button>
+                        {categories.map((category) => (
+                            <button
+                                key={category.id}
+                                className={`btn btn-sm ${selectedCategoryId === category.id ? 'btn-primary' : 'btn-outline'}`}
+                                onClick={() => setSelectedCategoryId(category.id)}
                             >
-                                <div className="font-bold">{product.name}</div>
-                                <div className="text-sm mt-1">Rp {product.price.toLocaleString()}</div>
-                            </div>
+                                {category.name}
+                            </button>
                         ))}
                     </div>
+                    <h2 className="text-2xl font-semibold mb-4">Daftar Layanan</h2>
+                    {categories
+                        .filter((cat) => selectedCategoryId === null || cat.id === selectedCategoryId)
+                        .map((category) => (
+                            <div key={category.id} className="mb-6">
+                                <div
+                                    className="flex justify-between items-center cursor-pointer p-2 bg-gray-100 rounded"
+                                    onClick={() =>
+                                        setExpandedCategories((prev) => ({
+                                            ...prev,
+                                            [category.id]: !prev[category.id],
+                                        }))
+                                    }
+                                >
+                                    <h3 className="text-lg font-bold">{category.name}</h3>
+                                    <span>{expandedCategories[category.id] ? '🔽' : '▶️'}</span>
+                                </div>
+
+                                {expandedCategories[category.id] && (
+                                    <div className="grid grid-cols-4 gap-4 mt-2">
+                                        {products
+                                            .filter((product) => product.idCategory === category.id)
+                                            .map((product) => (
+                                                <div
+                                                    key={product.id}
+                                                    className={`p-4 rounded-lg text-white cursor-pointer text-left ${product.bg}`}
+                                                    onClick={() => addToCart(product)}
+                                                >
+                                                    <div className="font-bold">{product.name}</div>
+                                                    {/* <div className="font-light text-sm">{product.desc}</div> */}
+                                                    <div className="text-sm mt-1">Rp {product.price.toLocaleString()}</div>
+                                                </div>
+                                            ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                 </div>
 
                 {/* Keranjang */}
                 <div className=" flex flex-col h-[calc(100vh-5rem)] p-4 md:col-span-1">
+
                     <h2 className="text-2xl font-semibold mb-4">Keranjang</h2>
 
                     <div className="flex-1 overflow-y-auto pr-2">
@@ -242,7 +364,7 @@ export default function Home() {
                                                     setCart(updatedCart);
                                                 }}
                                             >
-                                                <option value="">Pilih yang melayani</option>
+                                                <option value="">Pilih terapis</option>
                                                 {employees.map((emp, empIndex) => (
                                                     <option key={empIndex} value={emp.name}>
                                                         {emp.name}
@@ -256,7 +378,34 @@ export default function Home() {
                         )}
                     </div>
 
-                    <div className="mt-4 sticky bottom-0 bg-base-100 py-4 border-t">
+                    <div className="mt-4 sticky bottom-0 bg-base-100 py-4 ">
+                        <div className="mb-4">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    placeholder="Masukkan kupon"
+                                    value={coupon}
+                                    onChange={(e) => setCoupon(e.target.value)}
+                                />
+                                <button className="btn btn-primary" onClick={validateCoupon}>
+                                    Pakai
+                                </button>
+                            </div>
+                            {discount > 0 && (
+                                <div className="text-green-600 text-sm mt-2">
+                                    Diskon {discount}% diterapkan
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                            Subtotal: Rp {subtotal.toLocaleString()}
+                        </div>
+                        {discount > 0 && (
+                            <div className="text-sm text-green-600">
+                                Diskon: {discount}%
+                            </div>
+                        )}
                         <div className="font-bold text-lg mb-2">
                             Total: Rp {total.toLocaleString()}
                         </div>
