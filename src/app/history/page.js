@@ -9,7 +9,12 @@ export default function History() {
     useEffect(() => {
         const saved = localStorage.getItem('transactions');
         if (saved) {
-            setTransactions(JSON.parse(saved));
+            const parsedTransactions = JSON.parse(saved);
+    
+            // Sorting berdasarkan tanggal, terbaru di atas
+            const sortedTransactions = parsedTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            setTransactions(sortedTransactions);
         }
     }, []);
 
@@ -103,9 +108,12 @@ export default function History() {
                             <button className="btn btn-primary" onClick={exportExcel}>
                                 Export Excel
                             </button>
-                            <button className="btn btn-error" onClick={clearHistory}>
-                                Hapus Semua
+                            <button className="btn btn-secondary" onClick={exportExcel}>
+                                Update ke Server
                             </button>
+                            {/* <button className="btn btn-error" onClick={clearHistory}>
+                                Hapus Semua
+                            </button> */}
                         </>
                     )}
                 </div>

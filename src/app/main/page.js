@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ClockIcon, UserCircleIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, UserCircleIcon, DocumentTextIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+    const router = useRouter();
     const [cart, setCart] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState('');
@@ -10,6 +12,8 @@ export default function Home() {
     const [cashGiven, setCashGiven] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
+    const [selectedEDC, setSelectedEDC] = useState('');
+
 
     const [products] = useState([
         { id: 1, name: 'Cuci Mobil', price: 50000, bg: 'bg-blue-400' },
@@ -29,6 +33,11 @@ export default function Home() {
         { name: 'Mandiri', accountName: 'Hilman Zu', accountNumber: '9876543210' },
         { name: 'BRI', accountName: 'Hilman Zu', accountNumber: '5678901234' },
         { name: 'BNI', accountName: 'Hilman Zu', accountNumber: '4321098765' },
+    ];
+
+    const edcMachines = [
+        { name: 'EDC BCA' },
+        { name: 'EDC Mandiri' },
     ];
 
     useEffect(() => {
@@ -96,7 +105,7 @@ export default function Home() {
             cart: cartWithTransactionId,
             total,
             paymentMethod: selectedPayment,
-            bank: selectedPayment === 'Transfer' ? selectedBank : null,
+            bank: selectedPayment === 'Transfer' ? selectedBank : selectedPayment === 'EDC' ? selectedEDC : null,
             cashGiven: selectedPayment === 'Tunai' ? cashGiven : null,
             change: selectedPayment === 'Tunai' ? change : null,
         };
@@ -126,6 +135,11 @@ export default function Home() {
             return;
         }
 
+        if (selectedPayment === 'EDC' && !selectedEDC) {
+            alert('Pilih mesin EDC dulu!');
+            return;
+        }
+
         saveTransaction();
         setCart([]);
         setSelectedPayment('');
@@ -133,6 +147,7 @@ export default function Home() {
         setCashGiven('');
         setCustomerName('');
         setCustomerPhone('');
+        setSelectedEDC('');
         setShowModal(false);
         localStorage.removeItem('cart');
     };
@@ -148,18 +163,18 @@ export default function Home() {
                 {/* Kanan */}
                 <div className="flex gap-4 items-center text-gray-600">
                     {/* History Icon */}
-                    <button title="Riwayat" className="hover:text-primary">
+                    <button title="Riwayat" className="hover:text-primary cursor-pointer" onClick={() => router.push("/history")}>
                         <ClockIcon className="h-6 w-6" />
                     </button>
 
-                    {/* Akun Icon */}
-                    <button title="Akun" className="hover:text-primary">
-                        <UserCircleIcon className="h-6 w-6" />
+                    {/* Laporan Icon */}
+                    <button title="Laporan" className="hover:text-primary cursor-pointer">
+                        <ChartBarIcon className="h-6 w-6" />
                     </button>
 
-                    {/* Laporan Icon */}
-                    <button title="Laporan" className="hover:text-primary">
-                        <DocumentTextIcon className="h-6 w-6" />
+                    {/* Akun Icon */}
+                    <button title="Akun" className="hover:text-primary cursor-pointer">
+                        <UserCircleIcon className="h-6 w-6" />
                     </button>
                 </div>
             </header>
@@ -168,7 +183,7 @@ export default function Home() {
                 {/* Produk */}
                 <div className="p-4 md:col-span-2">
                     <h2 className="text-2xl font-semibold mb-4">Daftar Layanan</h2>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         {products.map((product) => (
                             <div
                                 key={product.id}
@@ -297,6 +312,12 @@ export default function Home() {
                                 Transfer
                             </button>
                             <button
+                                onClick={() => setSelectedPayment('EDC')}
+                                className={`btn w-full ${selectedPayment === 'EDC' ? 'btn-primary' : 'btn-outline'}`}
+                            >
+                                EDC
+                            </button>
+                            <button
                                 onClick={() => setSelectedPayment('Tunai')}
                                 className={`btn w-full ${selectedPayment === 'Tunai' ? 'btn-primary' : 'btn-outline'}`}
                             >
@@ -324,6 +345,21 @@ export default function Home() {
                                         <div className="font-bold">{bank.name}</div>
                                         <div className="text-sm">Atas Nama: {bank.accountName}</div>
                                         <div className="text-sm">No Rek: {bank.accountNumber}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {selectedPayment === 'EDC' && (
+                            <div className="mb-6 space-y-2">
+                                <div className="font-semibold mb-2">Pilih EDC:</div>
+                                {edcMachines.map((edc, index) => (
+                                    <div
+                                        key={index}
+                                        className={`p-4 rounded-lg border cursor-pointer ${selectedEDC?.name === edc.name ? 'border-primary' : 'border-gray-300'}`}
+                                        onClick={() => setSelectedEDC(edc)}
+                                    >
+                                        <div className="font-bold">{edc.name}</div>
                                     </div>
                                 ))}
                             </div>
