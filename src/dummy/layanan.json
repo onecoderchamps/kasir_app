@@ -46,6 +46,14 @@
       "bg": "bg-blue-400",
       "desc": "Pencucian mobil menyeluruh luar dan dalam.",
       "idCategory": 1
+    },
+    {
+      "id": 7,
+      "name": "Hair Cut",
+      "price": 250000,
+      "bg": "bg-blue-400",
+      "desc": "Pencucian mobil menyeluruh luar dan dalam.",
+      "idCategory": 2
     }
   ]
   
