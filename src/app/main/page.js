@@ -2,6 +2,16 @@
 import { useState, useEffect } from 'react';
 import { ClockIcon, UserCircleIcon, DocumentTextIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
+import categories from '../../dummy/category.json';
+import products from '../../dummy/layanan.json';
+import employees from '../../dummy/terapis.json';
+import banks from '../../dummy/bank.json';
+import edcMachines from '../../dummy/edc.json';
+import Select from "react-select";
+
+
+
+
 
 export default function Home() {
     const router = useRouter();
@@ -17,84 +27,6 @@ export default function Home() {
     const [expandedCategories, setExpandedCategories] = useState({});
     const [coupon, setCoupon] = useState('');
     const [discount, setDiscount] = useState(0);
-
-    const [categories] = useState([
-        { id: 1, name: 'Spa', bg: 'bg-blue-400' },
-        { id: 2, name: 'Salon', bg: 'bg-blue-400' },
-        { id: 3, name: 'Barber and Kiddy Cut', bg: 'bg-blue-400' },
-        { id: 4, name: 'Hair MM', bg: 'bg-blue-400' },
-        { id: 5, name: 'Smoothing, Digital Perm & Keratine', bg: 'bg-blue-400' },
-    ]);
-
-
-    const [products] = useState([
-        {
-            id: 1,
-            name: 'Back Massage 30Mnt',
-            price: 75000,
-            bg: 'bg-blue-400',
-            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
-            idCategory: 1
-        },
-        {
-            id: 2,
-            name: 'Back Massage 60Mnt',
-            price: 130000,
-            bg: 'bg-blue-400',
-            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
-            idCategory: 1
-        },
-        {
-            id: 3,
-            name: 'Back Massage 90Mnt',
-            price: 180000,
-            bg: 'bg-blue-400',
-            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
-            idCategory: 1
-        },
-        {
-            id: 4,
-            name: 'Back Massage 120Mnt',
-            price: 220000,
-            bg: 'bg-blue-400',
-            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
-            idCategory: 1
-        },
-        {
-            id: 5,
-            name: 'Body Scrub',
-            price: 120000,
-            bg: 'bg-blue-400',
-            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
-            idCategory: 1
-        },
-        {
-            id: 6,
-            name: 'Hair Spa',
-            price: 250000,
-            bg: 'bg-blue-400',
-            desc: 'Pencucian mobil menyeluruh luar dan dalam.',
-            idCategory: 1
-        },
-    ]);
-
-    const employees = [
-        { name: 'Budi' },
-        { name: 'Ani' },
-        { name: 'Cici' },
-    ];
-
-    const banks = [
-        { name: 'BCA', accountName: 'Hilman Zu', accountNumber: '1234567890' },
-        { name: 'Mandiri', accountName: 'Hilman Zu', accountNumber: '9876543210' },
-        { name: 'BRI', accountName: 'Hilman Zu', accountNumber: '5678901234' },
-        { name: 'BNI', accountName: 'Hilman Zu', accountNumber: '4321098765' },
-    ];
-
-    const edcMachines = [
-        { name: 'EDC BCA' },
-        { name: 'EDC Mandiri' },
-    ];
 
     useEffect(() => {
         const storedCart = localStorage.getItem('cart');
@@ -232,6 +164,11 @@ export default function Home() {
         localStorage.removeItem('cart');
     };
 
+    const options = employees.map((emp) => ({
+        value: emp.name,
+        label: emp.name,
+    }));
+
     return (
         <main className="p-6">
             <header className="flex justify-between items-center mb-6">
@@ -355,22 +292,26 @@ export default function Home() {
                                         </div>
 
                                         <div className="mt-2">
-                                            <select
-                                                className="select select-bordered w-full select-sm"
-                                                value={item.servedBy}
-                                                onChange={(e) => {
+                                            <Select
+                                                isMulti
+                                                className="w-full text-sm"
+                                                classNamePrefix="react-select"
+                                                options={options}
+                                                value={
+                                                    (item.servedBy?.split(',').filter(Boolean) || []).map(name => ({
+                                                        value: name,
+                                                        label: name,
+                                                    }))
+                                                }
+                                                onChange={(selectedOptions) => {
+                                                    const selectedNames = selectedOptions.map((opt) => opt.value);
                                                     const updatedCart = [...cart];
-                                                    updatedCart[index].servedBy = e.target.value;
+                                                    updatedCart[index].servedBy = selectedNames.join(',');
                                                     setCart(updatedCart);
                                                 }}
-                                            >
-                                                <option value="">Pilih terapis</option>
-                                                {employees.map((emp, empIndex) => (
-                                                    <option key={empIndex} value={emp.name}>
-                                                        {emp.name}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                placeholder="Pilih terapis"
+                                            />
+
                                         </div>
                                     </div>
                                 ))}

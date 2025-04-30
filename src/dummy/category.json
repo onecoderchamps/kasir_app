@@ -1,0 +1,7 @@
+[
+    { "id": 1, "name": "Spa", "bg": "bg-blue-400" },
+    { "id": 2, "name": "Salon", "bg": "bg-blue-400" },
+    { "id": 3, "name": "Barber and Kiddy Cut", "bg": "bg-blue-400" },
+    { "id": 4, "name": "Hair MM", "bg": "bg-blue-400" },
+    { "id": 5, "name": "Smoothing, Digital Perm & Keratine", "bg": "bg-blue-400" }
+]
