@@ -1,14 +1,9 @@
 [
   {
     "name": "Budiman Tanjung",
-    "idOutlet": "1i3pHGOv1dKYZj2QmzL2"
-  },
-  {
-    "name": "Ani Sukmawati",
-    "idOutlet": "1i3pHGOv1dKYZj2QmzL2"
-  },
-  {
-    "name": "Cici Dewi",
-    "idOutlet": "1i3pHGOv1dKYZj2QmzL2"
+    "username": "Budiman",
+    "idOutlet": "1i3pHGOv1dKYZj2QmzL2",
+    "pin":"123456",
+    "role":"Terapis"
   }
 ]
