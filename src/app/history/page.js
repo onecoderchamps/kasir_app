@@ -2,9 +2,35 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useRouter } from 'next/navigation';
 
 export default function History() {
     const [transactions, setTransactions] = useState([]);
+     const router = useRouter();
+    useEffect(() => {
+        const uid = localStorage.getItem('uid');
+        const loginDate = localStorage.getItem('loginDate');
+    
+        if (uid && loginDate) {
+          const today = new Date();
+          const login = new Date(loginDate);
+    
+          const sameDay =
+            today.getFullYear() === login.getFullYear() &&
+            today.getMonth() === login.getMonth() &&
+            today.getDate() === login.getDate();
+    
+          if (!sameDay) {
+            localStorage.removeItem('uid');
+            localStorage.removeItem('loginDate');
+            router.push('/');
+          }
+        }else{
+            localStorage.removeItem('uid');
+            localStorage.removeItem('loginDate');
+            router.push('/');
+        }
+      }, [router]);
 
     useEffect(() => {
         const saved = localStorage.getItem('transactions');

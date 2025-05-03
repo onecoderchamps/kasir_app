@@ -102,7 +102,7 @@ export default function CategoryTable() {
           <thead>
             <tr className="bg-gray-100">
               <th className="p-2 border">Nama</th>
-              <th className="p-2 border">Latar Belakang</th>
+              {/* <th className="p-2 border">Latar Belakang</th> */}
               <th className="p-2 border">Aksi</th>
             </tr>
           </thead>
@@ -117,7 +117,7 @@ export default function CategoryTable() {
               outlets.map((item) => (
                 <tr key={item.id} className="text-center">
                   <td className="border p-2">{item.name}</td>
-                  <td className="border p-2">{item.bg}</td>
+                  {/* <td className="border p-2">{item.bg}</td> */}
                   <td className="border p-2 space-x-2">
                     <button
                       onClick={() => handleEdit(item)}
@@ -153,14 +153,14 @@ export default function CategoryTable() {
                 className="w-full border p-2 rounded"
                 required
               />
-              <input
+              {/* <input
                 type="text"
                 placeholder="Latar Belakang (contoh: bg-blue-400)"
                 value={form.bg}
                 onChange={(e) => setForm({ ...form, bg: e.target.value })}
                 className="w-full border p-2 rounded"
                 required
-              />
+              /> */}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"

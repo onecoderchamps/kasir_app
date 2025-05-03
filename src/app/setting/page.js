@@ -1,15 +1,42 @@
 'use client'; // hanya untuk app router
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TerapisTable from "./terapis";
 import CategoryTable from "./category";
 import OutletTable from "./outlet";
 import ServiceTable from "./layanan";
+import { useRouter } from "next/navigation";
 
-const menuItems = ["Category", "Layanan","Outlet", "Terapis"];
+const menuItems = ["Category","Outlet", "Layanan", "Terapis"];
 
 export default function HomePage() {
     const [active, setActive] = useState("Category");
+     const router = useRouter();
+
+    useEffect(() => {
+        const uid = localStorage.getItem('uid');
+        const loginDate = localStorage.getItem('loginDate');
+    
+        if (uid && loginDate) {
+          const today = new Date();
+          const login = new Date(loginDate);
+    
+          const sameDay =
+            today.getFullYear() === login.getFullYear() &&
+            today.getMonth() === login.getMonth() &&
+            today.getDate() === login.getDate();
+    
+          if (!sameDay) {
+            localStorage.removeItem('uid');
+            localStorage.removeItem('loginDate');
+            router.push('/');
+          }
+        }else{
+            localStorage.removeItem('uid');
+            localStorage.removeItem('loginDate');
+            router.push('/');
+        }
+      }, [router]);
 
     const renderContent = () => {
         switch (active) {

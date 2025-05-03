@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function OmzetReport() {
@@ -9,6 +10,32 @@ export default function OmzetReport() {
   const [endDate, setEndDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    const uid = localStorage.getItem('uid');
+    const loginDate = localStorage.getItem('loginDate');
+
+    if (uid && loginDate) {
+      const today = new Date();
+      const login = new Date(loginDate);
+
+      const sameDay =
+        today.getFullYear() === login.getFullYear() &&
+        today.getMonth() === login.getMonth() &&
+        today.getDate() === login.getDate();
+
+      if (!sameDay) {
+        localStorage.removeItem('uid');
+        localStorage.removeItem('loginDate');
+        router.push('/');
+      }
+    }else{
+        localStorage.removeItem('uid');
+        localStorage.removeItem('loginDate');
+        router.push('/');
+    }
+  }, [router]);
 
   function getServedRevenue(transactions, category) {
     const result = [];
