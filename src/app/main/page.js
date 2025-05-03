@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ClockIcon, UserCircleIcon, DocumentTextIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, UserCircleIcon, ArrowRightOnRectangleIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import categories from '../../dummy/category.json';
 import products from '../../dummy/layanan.json';
@@ -97,6 +97,7 @@ export default function Home() {
     };
 
     const saveTransaction = () => {
+        const idOutlet = localStorage.getItem('idOutlet');
         const existingTransactions = JSON.parse(localStorage.getItem('transactions')) || [];
         const transactionId = Date.now();
         const cartWithTransactionId = cart.map(item => ({
@@ -115,6 +116,7 @@ export default function Home() {
             coupon,
             discount,
             paymentMethod: selectedPayment,
+            idOutlet: idOutlet,
             bank: selectedPayment === 'Transfer' ? selectedBank : selectedPayment === 'EDC' ? selectedEDC : null,
             cashGiven: selectedPayment === 'Tunai' ? cashGiven : null,
             change: selectedPayment === 'Tunai' ? change : null,
@@ -169,6 +171,31 @@ export default function Home() {
         label: emp.name,
     }));
 
+    useEffect(() => {
+        const uid = localStorage.getItem('uid');
+        const loginDate = localStorage.getItem('loginDate');
+    
+        if (uid && loginDate) {
+          const today = new Date();
+          const login = new Date(loginDate);
+    
+          const sameDay =
+            today.getFullYear() === login.getFullYear() &&
+            today.getMonth() === login.getMonth() &&
+            today.getDate() === login.getDate();
+    
+          if (!sameDay) {
+            localStorage.removeItem('uid');
+            localStorage.removeItem('loginDate');
+            router.push('/');
+          }
+        }else{
+            localStorage.removeItem('uid');
+            localStorage.removeItem('loginDate');
+            router.push('/');
+        }
+      }, [router]);
+
     return (
         <main className="p-6">
             <header className="flex justify-between items-center mb-6">
@@ -190,8 +217,8 @@ export default function Home() {
                     </button>
 
                     {/* Akun Icon */}
-                    <button title="Akun" className="hover:text-primary cursor-pointer">
-                        <UserCircleIcon className="h-6 w-6" />
+                    <button title="Akun" className="hover:text-primary cursor-pointer" onClick={() =>{localStorage.setItem('uid','');localStorage.setItem('loginDate',''); router.push('/');}}>
+                        <ArrowRightOnRectangleIcon className="h-6 w-6" />
                     </button>
                 </div>
             </header>
