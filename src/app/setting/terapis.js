@@ -5,53 +5,88 @@ import {
   collection,
   getDocs,
   addDoc,
-  deleteDoc,
   updateDoc,
+  deleteDoc,
   doc,
+  Timestamp,
   query,
-  where,
+  where
 } from 'firebase/firestore';
 import { db } from '@/api/firebase';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function TerapisTable() {
-  const [data, setData] = useState([]);
+export default function TherapistTable() {
+  const [therapists, setTherapists] = useState([]);
+  const [outlets, setOutlets] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [openOutlet, setOpenOutlet] = useState(null);
   const [form, setForm] = useState({
     name: '',
     username: '',
-    idOutlet: '',
     pin: '',
     role: 'Terapis',
-    isActive: true,
+    idOutlet: '',
+    createdAt: Timestamp.now(),
   });
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const outlet = typeof window !== 'undefined' ? localStorage.getItem('idOutlet') : '';
-    setForm((prev) => ({ ...prev, idOutlet: outlet }));
-    fetchData();
+    fetchTherapists();
+    fetchOutlets();
   }, []);
 
-  const fetchData = async () => {
-    const outlet = typeof window !== 'undefined' ? localStorage.getItem('idOutlet') : '';
-    const q = query(collection(db, 'Terapis'), where('idOutlet', '==', outlet));
-    const snapshot = await getDocs(q);
-    const result = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setData(result);
+  // Fetch Therapists
+  const fetchTherapists = async () => {
+    const snapshot = await getDocs(collection(db, 'Terapis'));
+    const result = snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt?.toDate?.() || a.createdAt) -
+          new Date(b.createdAt?.toDate?.() || b.createdAt)
+      );
+    setTherapists(result);
   };
 
+  // Fetch Outlets
+  const fetchOutlets = async () => {
+    const snapshot = await getDocs(collection(db, 'Outlet'));
+    const result = snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt?.toDate?.() || a.createdAt) -
+          new Date(b.createdAt?.toDate?.() || b.createdAt)
+      );
+    setOutlets(result);
+  };
+
+  // Check if username already exists
+  const checkUsernameExistence = async (username) => {
+    const q = query(collection(db, 'Terapis'), where('username', '==', username));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty; // Return true if the username exists
+  };
+
+  // Handle Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Clear previous errors
 
+    // Validate PIN length
     if (form.pin.length !== 6) {
-      alert('PIN harus terdiri dari 6 digit.');
+      setError('PIN harus terdiri dari 6 digit.');
       return;
     }
 
-    const usernameExists = data.some(
+    const usernameExists = therapists.some(
       (item) => item.username === form.username && item.id !== editId
     );
 
@@ -69,140 +104,187 @@ export default function TerapisTable() {
     setForm({
       name: '',
       username: '',
-      idOutlet: form.idOutlet,
       pin: '',
       role: 'Terapis',
-      isActive: true,
+      idOutlet: '',
+      createdAt: Timestamp.now(),
     });
     setEditId(null);
     setIsModalOpen(false);
-    fetchData();
+    fetchTherapists();
   };
 
+  // Handle Delete
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Apakah Anda yakin ingin menghapus terapis ini?');
-    if (!confirmDelete) return;
-
+    if (!window.confirm('Apakah Anda yakin ingin menghapus terapis ini?')) return;
     await deleteDoc(doc(db, 'Terapis', id));
-    fetchData();
+    fetchTherapists();
   };
 
+  // Handle Edit
   const handleEdit = (item) => {
     setForm(item);
     setEditId(item.id);
     setIsModalOpen(true);
   };
 
+  // Open New Modal
   const openNewModal = () => {
     setForm({
       name: '',
       username: '',
-      idOutlet: form.idOutlet,
       pin: '',
       role: 'Terapis',
-      isActive: true,
+      idOutlet: '',
+      createdAt: Timestamp.now(),
     });
     setEditId(null);
     setIsModalOpen(true);
   };
 
+  // Toggle Outlet
+  const toggleOutlet = (outletId) => {
+    setOpenOutlet(openOutlet === outletId ? null : outletId);
+  };
+
   return (
-    <div className="mx-auto h-screen">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Manajemen Terapis</h2>
+    <div className="mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Manajemen Terapis</h2>
         <button
           onClick={openNewModal}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 transition"
         >
-          Tambah Terapis
+          + Tambah Terapis
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      <table className="w-full border table-auto text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border">Nama</th>
-              <th className="p-2 border">Username</th>
-              <th className="p-2 border">PIN</th>
-              <th className="p-2 border">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="p-4 text-center text-gray-500">
-                  Belum ada dokumen terapis. Silakan tambahkan data.
-                </td>
-              </tr>
-            ) : (
-              data.map((item) => (
-                <tr key={item.id} className="text-center">
-                  <td className="border p-2">{item.name}</td>
-                  <td className="border p-2">{item.username}</td>
-                  <td className="border p-2">{item.pin}</td>
-                  <td className="border p-2 space-x-2">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="space-y-4">
+        {outlets.map((outlet) => {
+          const filteredTherapists = therapists.filter(
+            (therapist) => therapist.idOutlet === outlet.id
+          );
+          const isOpen = openOutlet === outlet.id;
+
+          return (
+            <div key={outlet.id} className="border rounded-xl shadow bg-white overflow-hidden">
+              <button
+                onClick={() => toggleOutlet(outlet.id)}
+                className="w-full flex items-center justify-between px-5 py-3 text-left text-lg font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                {outlet.nama}
+                {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </button>
+
+              {isOpen && (
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {filteredTherapists.length === 0 ? (
+                    <div className="text-center text-gray-400 col-span-full">
+                      Tidak ada terapis di outlet ini.
+                    </div>
+                  ) : (
+                    filteredTherapists.map((item) => (
+                      <div
+                        key={item.id}
+                        className="border rounded-xl p-4 shadow-sm hover:shadow-md transition bg-white flex flex-col justify-between"
+                      >
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{item.username}</p>
+                        </div>
+                        <div className="mt-4 flex justify-between items-center">
+                          <div className="space-x-2">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="text-sm text-red-600 hover:underline"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-bold mb-4">{editId ? 'Edit' : 'Tambah'} Terapis</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input
-                type="text"
-                placeholder="Name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border p-2 rounded"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Username"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full border p-2 rounded"
-                required
-              />
-              <input
-                type="text"
-                placeholder="PIN"
-                value={form.pin}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (/^\d{0,6}$/.test(value)) {
-                    setForm({ ...form, pin: value });
-                  }
-                }}
-                className="w-full border p-2 rounded"
-                required
-              />
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 transition">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg animate-fade-in">
+            <h3 className="text-xl font-bold mb-4">
+              {editId ? 'Edit Terapis' : 'Tambah Terapis'}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nama Terapis</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full mt-1 border p-2 rounded focus:ring focus:ring-blue-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Username</label>
+                <input
+                  type="text"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  className="w-full mt-1 border p-2 rounded focus:ring focus:ring-blue-200"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">PIN</label>
+                <input
+                  type="text"
+                  placeholder="PIN"
+                  value={form.pin}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (/^\d{0,6}$/.test(value)) {
+                      setForm({ ...form, pin: value });
+                    }
+                  }}
+                  className="w-full border p-2 rounded"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Outlet</label>
+                <select
+                  value={form.idOutlet}
+                  onChange={(e) => setForm({ ...form, idOutlet: e.target.value })}
+                  className="w-full mt-1 border p-2 rounded focus:ring focus:ring-blue-200"
+                  required
+                >
+                  <option value="" disabled>Pilih Outlet</option>
+                  {outlets.map((outlet) => (
+                    <option key={outlet.id} value={outlet.id}>
+                      {outlet.nama}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded border border-gray-400"
+                  className="px-4 py-2 rounded border border-gray-400 hover:bg-gray-100"
                 >
                   Batal
                 </button>

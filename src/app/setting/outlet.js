@@ -30,7 +30,7 @@ export default function OutletTable() {
   }, []);
 
   const fetchData = async () => {
-    const snapshot = await getDocs(collection(db, 'Outlets'));
+    const snapshot = await getDocs(collection(db, 'Outlet'));
     const result = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -42,9 +42,9 @@ export default function OutletTable() {
     e.preventDefault();
 
     if (editId) {
-      await updateDoc(doc(db, 'Outlets', editId), form);
+      await updateDoc(doc(db, 'Outlet', editId), form);
     } else {
-      await addDoc(collection(db, 'Outlets'), form);
+      await addDoc(collection(db, 'Outlet'), form);
     }
 
     setForm({
@@ -64,7 +64,7 @@ export default function OutletTable() {
     const confirmDelete = window.confirm('Apakah Anda yakin ingin menghapus outlet ini?');
     if (!confirmDelete) return;
 
-    await deleteDoc(doc(db, 'Outlets', id));
+    await deleteDoc(doc(db, 'Outlet', id));
     fetchData();
   };
 
