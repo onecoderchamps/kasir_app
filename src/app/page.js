@@ -54,6 +54,7 @@ export default function Home() {
   
       localStorage.setItem('uid', uid);
       localStorage.setItem('idOutlet', userData.idOutlet);
+      localStorage.setItem('outlet', userData.nameOutlet);
       localStorage.setItem('loginDate', new Date().toISOString());
       router.push('/main');
     } else {

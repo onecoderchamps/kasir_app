@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { collection, getDocs, query, Timestamp, where } from 'firebase/firestore';
+import { db } from '@/api/firebase';
 
 export default function OmzetReport() {
   const [pivotData, setPivotData] = useState([]);
@@ -12,6 +14,7 @@ export default function OmzetReport() {
   const [categories, setCategories] = useState([]);
   const router = useRouter();
 
+  // Cek sesi login
   useEffect(() => {
     const uid = localStorage.getItem('uid');
     const loginDate = localStorage.getItem('loginDate');
@@ -30,19 +33,34 @@ export default function OmzetReport() {
         localStorage.removeItem('loginDate');
         router.push('/');
       }
-    }else{
-        localStorage.removeItem('uid');
-        localStorage.removeItem('loginDate');
-        router.push('/');
+    } else {
+      localStorage.removeItem('uid');
+      localStorage.removeItem('loginDate');
+      router.push('/');
     }
   }, [router]);
 
-  function getServedRevenue(transactions, category) {
+  // Ambil kategori dari Firebase
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const snapshot = await getDocs(collection(db, 'Category'));
+      const fetched = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCategories(fetched);
+      setSelectedCategory(fetched[0]?.id || '');
+    };
+    fetchCategories();
+  }, []);
+
+  // Fungsi utility
+  function getServedRevenue(transactions, categoryId) {
     const result = [];
 
     transactions.forEach((transaction) => {
       transaction.cart.forEach((item) => {
-        if (category && item.idCategory !== category) return;
+        if (categoryId && item.idCategory !== categoryId) return;
 
         const servers = item.servedBy.split(',').map((name) => name.trim());
         const revenuePerPerson = item.price / servers.length;
@@ -109,49 +127,45 @@ export default function OmzetReport() {
     return { rows, sortedNames };
   }
 
-  useEffect(() => {
-    const stored = localStorage.getItem('transactions');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-
-        // Ambil semua kategori unik
-        const categorySet = new Set();
-        parsed.forEach(t => t.cart.forEach(i => categorySet.add(i.idCategory)));
-        const categoryList = Array.from(categorySet);
-        setCategories(categoryList);
-        setSelectedCategory(categoryList[0] || '');
-
-        // Ambil tanggal range dari semua transaksi
-        const allDates = parsed.map((t) => new Date(t.date).toLocaleDateString('en-CA'));
-        const minDate = allDates.length > 0 ? allDates.reduce((a, b) => (a < b ? a : b)) : '';
-        const maxDate = allDates.length > 0 ? allDates.reduce((a, b) => (a > b ? a : b)) : '';
-        setStartDate(minDate);
-        setEndDate(maxDate);
-      } catch (e) {
-        console.error('Invalid JSON in localStorage:', e);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('transactions');
-    if (stored && startDate && endDate && selectedCategory) {
-      try {
-        const parsed = JSON.parse(stored);
-        const servedRevenue = getServedRevenue(parsed, selectedCategory);
-        const { rows, sortedNames } = buildPivot(servedRevenue, startDate, endDate);
-        setPivotData(rows);
-        setNames(sortedNames);
-      } catch (e) {
-        console.error('Invalid JSON in localStorage:', e);
-      }
-    }
-  }, [startDate, endDate, selectedCategory]);
+  // Fetch data transaksi dari Firebase berdasarkan filter
+  const fetchReport = async () => {
+    if (!startDate || !endDate || !selectedCategory) return;
+  
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // sampai akhir hari
+  
+    const transaksiRef = collection(db, 'Transaksi');
+    const q = query(
+      transaksiRef,
+      where('date', '>=', Timestamp.fromDate(start)),
+      where('date', '<=', Timestamp.fromDate(end)),
+      where('idOutlet', '==', localStorage.getItem('idOutlet'))
+    );
+  
+    const snapshot = await getDocs(q);
+    const transactions = snapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        // Pastikan t.date adalah objek Timestamp, gunakan toDate() jika perlu
+        return {
+          ...data,
+          date: data.date?.toDate?.() ?? new Date(data.date.seconds * 1000),
+        };
+      })
+      .filter((t) =>
+        t.cart.some((item) => item.idCategory === selectedCategory)
+      );
+  
+    const servedRevenue = getServedRevenue(transactions, selectedCategory);
+    const { rows, sortedNames } = buildPivot(servedRevenue, startDate, endDate);
+    setPivotData(rows);
+    setNames(sortedNames);
+  };
 
   return (
     <main className="p-6">
-      <h1 className="text-xl font-bold mb-4">Omzet Report (Filtered by Category)</h1>
+      <h1 className="text-xl font-bold mb-4">Laporan Omset</h1>
 
       <div className="flex flex-wrap gap-4 mb-4 items-end">
         <div>
@@ -176,16 +190,22 @@ export default function OmzetReport() {
           <label className="block text-sm font-medium">Kategori</label>
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(parseInt(e.target.value))}
+            onChange={(e) => setSelectedCategory(e.target.value)}
             className="border p-2 rounded"
           >
             {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                Kategori {cat}
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
               </option>
             ))}
           </select>
         </div>
+        <button
+          onClick={fetchReport}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Cari
+        </button>
       </div>
 
       <div className="overflow-x-auto">

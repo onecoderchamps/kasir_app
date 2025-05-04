@@ -6,8 +6,9 @@ import CategoryTable from "./category";
 import OutletTable from "./outlet";
 import ServiceTable from "./layanan";
 import { useRouter } from "next/navigation";
+import UserTable from "./kasir";
 
-const menuItems = ["Category","Outlet", "Layanan", "Terapis"];
+const menuItems = ["Category","Outlet", "Layanan", "Terapis", "Kasir"];
 
 export default function HomePage() {
     const [active, setActive] = useState("Category");
@@ -48,8 +49,8 @@ export default function HomePage() {
                 return <TerapisTable />;
             case "Outlet":
                 return <OutletTable />;
-            case "EDC":
-                return <p>Ini adalah konten untuk <strong>EDC</strong>.</p>;
+            case "Kasir":
+                return <UserTable />;
             case "Bank":
                 return <p>Ini adalah konten untuk <strong>Bank</strong>.</p>;
             default:

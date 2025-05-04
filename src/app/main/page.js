@@ -2,16 +2,14 @@
 import { useState, useEffect } from 'react';
 import { ClockIcon, UserCircleIcon, ArrowRightOnRectangleIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
-import categories from '../../dummy/category.json';
-import products from '../../dummy/layanan.json';
-import employees from '../../dummy/terapis.json';
+// import categories from '../../dummy/category.json';
+// import products from '../../dummy/layanan.json';
+// import employees from '../../dummy/terapis.json';
 import banks from '../../dummy/bank.json';
 import edcMachines from '../../dummy/edc.json';
 import Select from "react-select";
-
-
-
-
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/api/firebase';
 
 export default function Home() {
     const router = useRouter();
@@ -27,9 +25,72 @@ export default function Home() {
     const [expandedCategories, setExpandedCategories] = useState({});
     const [coupon, setCoupon] = useState('');
     const [discount, setDiscount] = useState(0);
+    const [categories, setCategories] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [employees, setEmployees] = useState([]);
+    const [outlet, setoutlet] = useState("POS");
+
+
+    const fetchCategories = async () => {
+        const snapshot = await getDocs(collection(db, 'Category'));
+        const result = snapshot.docs
+            .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }))
+            .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+        // setCategories(result);
+        localStorage.setItem('categories', JSON.stringify(result));
+
+    };
+
+    const fetchServices = async () => {
+        const snapshot = await getDocs(collection(db, 'Services'));
+        const result = snapshot.docs
+            .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }))
+            .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+        // setProducts(result);
+        localStorage.setItem('services', JSON.stringify(result));
+
+    };
+
+    const fetchTerapis = async () => {
+        const idOutlet = localStorage.getItem('idOutlet');
+        const q = query(collection(db, 'Terapis'), where('idOutlet', '==', idOutlet));
+        const querySnapshot = await getDocs(q);
+        const result = querySnapshot.docs
+            .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }))
+            .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+        // setEmployees(result);
+        localStorage.setItem('terapis', JSON.stringify(result));
+    };
 
     useEffect(() => {
+        // fetchCategories();
+        // fetchServices();
+        // fetchTerapis();
+        const categories = localStorage.getItem('categories');
+        if (categories) {
+            setCategories(JSON.parse(categories));
+        }
+        const services = localStorage.getItem('services');
+        if (services) {
+            setProducts(JSON.parse(services));
+        }
+        const trapis = localStorage.getItem('terapis');
+        if (trapis) {
+            setEmployees(JSON.parse(trapis));
+        }
+
         const storedCart = localStorage.getItem('cart');
+        const outlet = localStorage.getItem('outlet');
+        setoutlet(outlet);
         if (storedCart) {
             setCart(JSON.parse(storedCart));
         }
@@ -121,10 +182,19 @@ export default function Home() {
             cashGiven: selectedPayment === 'Tunai' ? cashGiven : null,
             change: selectedPayment === 'Tunai' ? change : null,
         };
-
         existingTransactions.push(newTransaction);
         localStorage.setItem('transactions', JSON.stringify(existingTransactions));
+        alert("Terimakasih, transaksi berhasil disimpan!");
     };
+
+    const updateDatabase = async () => {
+        await fetchCategories();
+        await fetchServices();
+        await fetchTerapis();
+        alert("Sudah update semua");
+        window.location.reload();
+    }    
+    
 
     const confirmPayment = () => {
         if (!customerName.trim() || !customerPhone.trim()) {
@@ -174,38 +244,41 @@ export default function Home() {
     useEffect(() => {
         const uid = localStorage.getItem('uid');
         const loginDate = localStorage.getItem('loginDate');
-    
+
         if (uid && loginDate) {
-          const today = new Date();
-          const login = new Date(loginDate);
-    
-          const sameDay =
-            today.getFullYear() === login.getFullYear() &&
-            today.getMonth() === login.getMonth() &&
-            today.getDate() === login.getDate();
-    
-          if (!sameDay) {
-            localStorage.removeItem('uid');
-            localStorage.removeItem('loginDate');
-            router.push('/');
-          }
-        }else{
+            const today = new Date();
+            const login = new Date(loginDate);
+
+            const sameDay =
+                today.getFullYear() === login.getFullYear() &&
+                today.getMonth() === login.getMonth() &&
+                today.getDate() === login.getDate();
+
+            if (!sameDay) {
+                localStorage.removeItem('uid');
+                localStorage.removeItem('loginDate');
+                router.push('/');
+            }
+        } else {
             localStorage.removeItem('uid');
             localStorage.removeItem('loginDate');
             router.push('/');
         }
-      }, [router]);
+    }, [router]);
 
     return (
         <main className="p-6">
             <header className="flex justify-between items-center mb-6">
                 {/* Kiri */}
                 <div className="text-2xl font-bold m-4">
-                    POS Cab Kalibata
+                    Outlet {outlet}
                 </div>
 
                 {/* Kanan */}
                 <div className="flex gap-4 items-center text-gray-600">
+                    <button className="btn btn-success" onClick={updateDatabase}>
+                                Update Database
+                            </button>
                     {/* History Icon */}
                     <button title="Riwayat" className="hover:text-primary cursor-pointer" onClick={() => window.open('/history', '_blank')}>
                         <ClockIcon className="h-6 w-6" />
@@ -217,7 +290,7 @@ export default function Home() {
                     </button>
 
                     {/* Akun Icon */}
-                    <button title="Akun" className="hover:text-primary cursor-pointer" onClick={() =>{localStorage.setItem('uid','');localStorage.setItem('loginDate',''); router.push('/');}}>
+                    <button title="Akun" className="hover:text-primary cursor-pointer" onClick={() => { localStorage.setItem('uid', ''); localStorage.setItem('loginDate', ''); router.push('/'); }}>
                         <ArrowRightOnRectangleIcon className="h-6 w-6" />
                     </button>
                 </div>
