@@ -11,6 +11,8 @@ export default function OmzetReport() {
   const [endDate, setEndDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState([]);
+  const [selectedOutlet, setSelectedOutlet] = useState('');
+  const [outlet, setOutlet] = useState([]);
 
   // Cek sesi login
   useEffect(() => {
@@ -52,6 +54,22 @@ export default function OmzetReport() {
       setSelectedCategory(fetched[0]?.id || '');
     };
     fetchCategories();
+  }, []);
+
+  // Ambil kategori dari Firebase
+  useEffect(() => {
+    const fetchOutlet = async () => {
+      const snapshot = await getDocs(collection(db, 'Outlet'));
+      const fetched = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+      setOutlet(fetched);
+      setSelectedOutlet(fetched[0]?.id || '');
+    };
+    fetchOutlet();
   }, []);
 
   // Fungsi utility
@@ -140,7 +158,7 @@ export default function OmzetReport() {
       transaksiRef,
       where('date', '>=', Timestamp.fromDate(start)),
       where('date', '<=', Timestamp.fromDate(end)),
-      where('idOutlet', '==', localStorage.getItem('idOutlet'))
+      where('idOutlet', '==', selectedOutlet)
     );
 
     const snapshot = await getDocs(q);
@@ -204,6 +222,20 @@ export default function OmzetReport() {
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Outlet</label>
+          <select
+            value={selectedOutlet}
+            onChange={(e) => setSelectedOutlet(e.target.value)}
+            className="border p-2 rounded"
+          >
+            {outlet.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.nama}
               </option>
             ))}
           </select>

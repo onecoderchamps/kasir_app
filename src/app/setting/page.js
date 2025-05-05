@@ -4,12 +4,35 @@ import CategoryTable from "./category";
 import OutletTable from "./outlet";
 import ServiceTable from "./layanan";
 import UserTable from "./kasir";
+import Omset from "./omset";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../api/firebase";
 
-const menuItems = ["Category", "Outlet", "Layanan", "Terapis", "Kasir"];
+const menuItems = ["Laporan", "Category", "Outlet", "Layanan", "Terapis", "Kasir"];
 
 export default function HomePage() {
     const [active, setActive] = useState("Category");
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const uid = localStorage.getItem('uid');
+            if (!uid) {
+                window.history.back();
+                return;
+            }
+            try {
+                const userRef = doc(db, 'User', uid); // 'users' adalah nama koleksi
+                const userSnap = await getDoc(userRef);
+                if (userSnap.data().role !== 'Admin') {
+                    window.history.back()
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
+            }
+        };
+        fetchUser();
+    }, []);
 
     useEffect(() => {
         const uid = localStorage.getItem('uid');
@@ -36,6 +59,12 @@ export default function HomePage() {
         }
     }, []);
 
+    const handleLogout = () => {
+        localStorage.removeItem('uid');
+        localStorage.removeItem('loginDate');
+        window.location.href = '/';
+    };
+
     const renderContent = () => {
         switch (active) {
             case "Category":
@@ -48,6 +77,8 @@ export default function HomePage() {
                 return <OutletTable />;
             case "Kasir":
                 return <UserTable />;
+            case "Laporan":
+                return <Omset />;
             case "Bank":
                 return <p>Ini adalah konten untuk <strong>Bank</strong>.</p>;
             default:
@@ -60,12 +91,6 @@ export default function HomePage() {
             {/* Sidebar */}
             <div className="w-64 bg-white shadow-lg p-4">
                 <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => window.history.back()}
-                        className="flex items-center text-gray-700 hover:text-gray-900 mb-6"
-                    >
-                        <ArrowLeftIcon className="h-5 w-5 mr-1" />
-                    </button>
                     <h1 className="text-2xl font-bold mb-6 text-blue-600">Setting</h1>
                 </div>
                 <ul className="space-y-3">
@@ -81,6 +106,12 @@ export default function HomePage() {
                             {item}
                         </li>
                     ))}
+                    <li
+                        onClick={() => handleLogout()}
+                        className={`cursor-pointer px-4 py-2 rounded-md bg-red-100 text-white-700 font-semibold absolute bottom-5`}
+                    >
+                        Keluar
+                    </li>
                 </ul>
             </div>
 

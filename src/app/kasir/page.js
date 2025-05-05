@@ -3,7 +3,7 @@ import { ClockIcon, UserCircleIcon, ArrowRightOnRectangleIcon, ChartBarIcon, Cog
 import banks from '../../dummy/bank.json';
 import edcMachines from '../../dummy/edc.json';
 import Select from "react-select";
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../api/firebase';
 
 export default function HomeBase() {
@@ -66,9 +66,6 @@ export default function HomeBase() {
     };
 
     useEffect(() => {
-        // fetchCategories();
-        // fetchServices();
-        // fetchTerapis();
         const categories = localStorage.getItem('categories');
         if (categories) {
             setCategories(JSON.parse(categories));
@@ -258,6 +255,26 @@ export default function HomeBase() {
             localStorage.removeItem('loginDate');
             window.location.href = '/';
         }
+    }, []);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const uid = localStorage.getItem('uid');
+            if (!uid) {
+                window.history.back();
+                return;
+              }
+            try {
+                const userRef = doc(db, 'User', uid); // 'users' adalah nama koleksi
+                const userSnap = await getDoc(userRef);
+                if (userSnap.data().role !== 'Kasir') {
+                    window.history.back()
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
+            }
+        };
+        fetchUser();
     }, []);
 
     return (
