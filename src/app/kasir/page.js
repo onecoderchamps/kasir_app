@@ -267,6 +267,11 @@ export default function HomeBase() {
             try {
                 const userRef = doc(db, 'User', uid); // 'users' adalah nama koleksi
                 const userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) {
+                    console.log('No such document!');
+                    window.history.back();
+                    return;
+                }
                 if (userSnap.data().role !== 'Kasir') {
                     window.history.back()
                 }
