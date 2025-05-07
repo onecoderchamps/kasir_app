@@ -180,7 +180,7 @@ export default function AbsensiPage() {
 
   return (
     <main className="p-6 bg-gray-50 min-h-screen">
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <button
           onClick={() => window.history.back()}
           className="flex items-center text-gray-600 hover:text-gray-900"
@@ -188,7 +188,7 @@ export default function AbsensiPage() {
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
           Kembali
         </button>
-      </div>
+      </div> */}
 
       <h1 className="text-2xl font-bold mb-4">Absensi</h1>
 
@@ -250,7 +250,7 @@ export default function AbsensiPage() {
               disabled={!inRange}
               className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
             >
-              Masuk
+              Absen Masuk
             </button>
           )}
           {absenToday?.jamMasuk && !absenToday?.jamKeluar && (
@@ -259,11 +259,21 @@ export default function AbsensiPage() {
               disabled={!inRange}
               className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
             >
-              Keluar
+              Absen Keluar
             </button>
           )}
         </div>
       )}
+      <button
+        onClick={() => {
+          localStorage.setItem('uid', '');
+          localStorage.setItem('loginDate', '');
+          window.location.href = '/';
+      }}
+        className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50 mt-20"
+      >
+        Log Out
+      </button>
     </main>
   );
 }
