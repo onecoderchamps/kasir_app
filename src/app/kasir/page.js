@@ -179,13 +179,20 @@ export default function HomeBase() {
     };
 
     const updateDatabase = async () => {
+        const confirmed = window.confirm(
+            "PERHATIAN!\n\nMelakukan update data akan me-refresh kasir ini secara otomatis dan mengambil data terbaru dari server.\n\nSilakan CEK KEMBALI apakah ada layanan, harga, atau data lain yang berubah setelah update.\n\nLanjutkan update?"
+        );
+    
+        if (!confirmed) return;
+    
         await fetchCategories();
         await fetchServices();
         await fetchTerapis();
-        alert("Sudah update semua");
+    
+        alert("Data berhasil diperbarui dari server.");
         window.location.reload();
-    }
-
+    };
+    
 
     const confirmPayment = () => {
         if (!customerName.trim() || !customerPhone.trim()) {
@@ -318,13 +325,21 @@ export default function HomeBase() {
             <header className="flex justify-between items-center mb-6">
                 {/* Kiri */}
                 <div className="text-2xl font-bold m-4">
-                    Outlet {outlet}
+                    Kasir Outlet {outlet}
                 </div>
 
                 {/* Kanan */}
                 <div className="flex gap-4 items-center text-gray-600">
+                    {editMode &&
+                        <button
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                            onClick={updateDatabase}
+                        >
+                            Update Database
+                        </button>
+                    }
                     <div className="flex items-center space-x-2">
-                        <label htmlFor="editToggle" className="text-sm">Edit Mode</label>
+                        <label htmlFor="editToggle" className="text-sm">Update Mode</label>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
                                 type="checkbox"
@@ -338,12 +353,6 @@ export default function HomeBase() {
                         </label>
                     </div>
 
-                    <button
-                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                        onClick={updateDatabase}
-                    >
-                        Update Database
-                    </button>
                     {/* History Icon */}
                     <button
                         title="Riwayat"
