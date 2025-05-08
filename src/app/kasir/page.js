@@ -317,13 +317,13 @@ export default function HomeBase() {
                     </button>
 
                     {/* Laporan Icon */}
-                    <button
+                    {/* <button
                         title="Pengaturan"
                         className="hover:text-blue-500 cursor-pointer"
                         onClick={() => window.location.href = '/setting'}
                     >
                         <Cog6ToothIcon className="h-6 w-6" />
-                    </button>
+                    </button> */}
 
                     {/* Akun Icon */}
                     <button

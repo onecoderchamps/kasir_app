@@ -293,8 +293,25 @@ export default function ServiceTable() {
                                                             });
                                                         }}
                                                     />
-                                                    <span>{`${item.nama} (${item.qty} ${item.satuan})`}</span>
+                                                    <span>{`${item.nama} ( ${item.qty} Sisa Pemakaian )`}</span>
                                                 </div>
+                                                {isChecked && (
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={amount}
+                                                        onChange={(e) => {
+                                                            const value = parseFloat(e.target.value) || 1;
+                                                            setForm((prevForm) => ({
+                                                                ...prevForm,
+                                                                ingredients: prevForm.ingredients.map((ing) =>
+                                                                    ing.id === item.id ? { ...ing, amount: value } : ing
+                                                                ),
+                                                            }));
+                                                        }}
+                                                        className="w-16 border p-1 rounded text-right"
+                                                    />
+                                                )}
                                             </label>
                                         );
                                     })}

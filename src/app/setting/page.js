@@ -10,7 +10,15 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../api/firebase";
 
-const menuItems = ["Laporan", "Kategori", "Outlet", "Layanan", "Inventory", "Terapis", "Kasir"];
+const menuItems = [
+    "Laporan", 
+    "Kategori Layanan", 
+    "Layanan", 
+    "Outlet", 
+    "Inventory", 
+    "Terapis", 
+    "Kasir"
+];
 
 export default function HomePage() {
     const [active, setActive] = useState("Laporan");
@@ -73,7 +81,7 @@ export default function HomePage() {
 
     const renderContent = () => {
         switch (active) {
-            case "Kategori":
+            case "Kategori Layanan":
                 return <CategoryTable />;
             case "Layanan":
                 return <ServiceTable />

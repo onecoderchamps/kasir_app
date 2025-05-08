@@ -105,8 +105,8 @@ export default function InventoryTable() {
           <thead>
             <tr className="bg-gray-100">
               <th className="p-2 border">Nama Bahan</th>
-              <th className="p-2 border">Jumlah</th>
-              <th className="p-2 border">Satuan</th>
+              <th className="p-2 border">Pemakaian</th>
+              {/* <th className="p-2 border">Satuan</th> */}
               <th className="p-2 border">Aksi</th>
             </tr>
           </thead>
@@ -122,7 +122,7 @@ export default function InventoryTable() {
                 <tr key={item.id} className="text-center">
                   <td className="border p-2">{item.nama}</td>
                   <td className="border p-2">{item.qty}</td>
-                  <td className="border p-2">{item.satuan}</td>
+                  {/* <td className="border p-2">{item.satuan}</td> */}
                   <td className="border p-2 space-x-2">
                     <button
                       onClick={() => handleEdit(item)}

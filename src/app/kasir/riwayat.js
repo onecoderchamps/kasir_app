@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { collection, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../api/firebase';
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
@@ -14,6 +14,7 @@ export default function History() {
         let parsedTransactions = JSON.parse(saved);
 
         setLoading(true);
+
         try {
             for (const trx of parsedTransactions) {
                 const dateObj = new Date(trx.date);
@@ -22,13 +23,39 @@ export default function History() {
                     date: Timestamp.fromDate(dateObj)
                 };
 
+                // Simpan transaksi ke Firestore
                 await setDoc(doc(collection(db, "Transaksi"), trx.id.toString()), trxWithTimestamp);
+
+                // Update inventory berdasarkan cart
+                for (const item of trx.cart) {
+                    if (!item.ingredients || !Array.isArray(item.ingredients)) continue;
+                    for (const ingredient of item.ingredients) {
+                        const ingredientRef = doc(db, 'Inventory', ingredient.id);
+                        const ingredientSnap = await getDoc(ingredientRef);
+
+                        if (ingredientSnap.exists()) {
+                            const currentData = ingredientSnap.data();
+                            const currentQty = currentData.qty || 0;
+
+                            const deduction = ingredient.amount * item.qty;
+                            const newQty = Math.max(currentQty - deduction, 0); // Hindari qty negatif
+
+                            await updateDoc(ingredientRef, {
+                                qty: newQty
+                            });
+                        } else {
+                            console.warn(`Ingredient ${ingredient.id} tidak ditemukan di Inventory.`);
+                        }
+                    }
+                }
+
+                // Hapus transaksi dari localStorage setelah berhasil disimpan
                 parsedTransactions = parsedTransactions.filter(item => item.id !== trx.id);
                 localStorage.setItem('transactions', JSON.stringify(parsedTransactions));
                 setTransactions(parsedTransactions);
             }
 
-            alert("Semua transaksi berhasil disimpan ke Firebase!");
+            alert("Semua transaksi berhasil disimpan ke Firebase dan stok dikurangi.");
         } catch (error) {
             console.error("Gagal menyimpan transaksi:", error);
             alert("Gagal menyimpan transaksi. Lihat console untuk detail.");
