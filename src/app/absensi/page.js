@@ -151,6 +151,7 @@ export default function AbsensiPage() {
           tanggal: todayDateString,
           jamMasuk: type === 'masuk' ? now : null,
           jamKeluar: type === 'keluar' ? now : null,
+          status: 'Hadir'
         };
         const docRef = await addDoc(collection(db, 'Absensi'), newDoc);
         setAbsenToday({ id: docRef.id, ...newDoc });

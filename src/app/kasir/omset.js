@@ -57,20 +57,20 @@ export default function OmzetReport() {
   }, []);
 
   // Ambil kategori dari Firebase
-  useEffect(() => {
-    const fetchOutlet = async () => {
-      const snapshot = await getDocs(collection(db, 'Outlet'));
-      const fetched = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
-      setOutlet(fetched);
-      setSelectedOutlet(fetched[0]?.id || '');
-    };
-    fetchOutlet();
-  }, []);
+  // useEffect(() => {
+  //   const fetchOutlet = async () => {
+  //     const snapshot = await getDocs(collection(db, 'Outlet'));
+  //     const fetched = snapshot.docs
+  //       .map((doc) => ({
+  //         id: doc.id,
+  //         ...doc.data(),
+  //       }))
+  //       .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+  //     setOutlet(fetched);
+  //     setSelectedOutlet(fetched[0]?.id || '');
+  //   };
+  //   fetchOutlet();
+  // }, []);
 
   // Fungsi utility
   function getServedRevenue(transactions, categoryId) {
@@ -158,7 +158,7 @@ export default function OmzetReport() {
       transaksiRef,
       where('date', '>=', Timestamp.fromDate(start)),
       where('date', '<=', Timestamp.fromDate(end)),
-      where('idOutlet', '==', selectedOutlet)
+      where('idOutlet', '==', localStorage.getItem('idOutlet'))
     );
 
     const snapshot = await getDocs(q);
@@ -226,7 +226,7 @@ export default function OmzetReport() {
             ))}
           </select>
         </div>
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium">Outlet</label>
           <select
             value={selectedOutlet}
@@ -239,7 +239,7 @@ export default function OmzetReport() {
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
         <button
           onClick={fetchReport}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
