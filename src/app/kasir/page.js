@@ -263,7 +263,7 @@ export default function HomeBase() {
             if (!uid) {
                 window.history.back();
                 return;
-              }
+            }
             try {
                 const userRef = doc(db, 'User', uid); // 'users' adalah nama koleksi
                 const userSnap = await getDoc(userRef);
@@ -282,6 +282,37 @@ export default function HomeBase() {
         fetchUser();
     }, []);
 
+    const [editForm, setEditForm] = useState(null);
+    const [editMode, setEditMode] = useState(false);
+
+    ////crud local
+    const handleEdit = (product) => {
+        setEditForm(product); // Tampilkan modal edit
+    };
+
+    const handleDelete = (id) => {
+        const confirmDelete = window.confirm("Yakin ingin menghapus item?");
+        if (!confirmDelete) return;
+
+        const updated = products.filter((item) => item.id !== id);
+        setProducts(updated); // update state view
+        localStorage.setItem('services', JSON.stringify(updated)); // update storage
+    };
+
+    const handleUpdate = () => {
+        const updated = products.map((item) =>
+            item.id === editForm.id ? editForm : item
+        );
+        setProducts(updated);
+        localStorage.setItem('services', JSON.stringify(updated));
+        setEditForm(null);
+    };
+
+    useEffect(() => {
+        const saved = localStorage.getItem('services');
+        if (saved) setProducts(JSON.parse(saved));
+    }, []);
+
     return (
         <main className="p-6">
             <header className="flex justify-between items-center mb-6">
@@ -292,6 +323,21 @@ export default function HomeBase() {
 
                 {/* Kanan */}
                 <div className="flex gap-4 items-center text-gray-600">
+                    <div className="flex items-center space-x-2">
+                        <label htmlFor="editToggle" className="text-sm">Edit Mode</label>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                id="editToggle"
+                                className="sr-only peer"
+                                checked={editMode}
+                                onChange={() => setEditMode(!editMode)}
+                            />
+                            <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-blue-600 transition duration-300"></div>
+                            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transition peer-checked:translate-x-full"></div>
+                        </label>
+                    </div>
+
                     <button
                         className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
                         onClick={updateDatabase}
@@ -390,8 +436,63 @@ export default function HomeBase() {
                                                 >
                                                     <div className="font-bold">{product.name}</div>
                                                     <div className="text-sm mt-1">Rp {product.price.toLocaleString()}</div>
+                                                    {/* Tombol edit dan hapus */}
+                                                    {editMode &&
+                                                        <div className="mt-5 space-x-1">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEdit(product);
+                                                                }}
+                                                                className="bg-yellow-400 text-xs px-2 py-1 rounded"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(product.id);
+                                                                }}
+                                                                className="bg-red-500 text-xs px-2 py-1 rounded"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </div>
+                                                    }
                                                 </div>
                                             ))}
+                                    </div>
+                                )}
+                                {editForm && (
+                                    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+                                        <div className="bg-white p-6 rounded-lg w-full max-w-sm">
+                                            <h2 className="text-lg font-bold mb-4">Edit Produk</h2>
+                                            <input
+                                                type="text"
+                                                placeholder="Nama"
+                                                value={editForm.name}
+                                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                                className="w-full border px-3 py-2 mb-2"
+                                            />
+                                            <input
+                                                type="number"
+                                                placeholder="Harga"
+                                                value={editForm.price}
+                                                onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
+                                                className="w-full border px-3 py-2 mb-4"
+                                            />
+                                            <div className="flex justify-end space-x-2">
+                                                <button onClick={() => setEditForm(null)} className="px-4 py-2 border rounded">
+                                                    Batal
+                                                </button>
+                                                <button
+                                                    onClick={handleUpdate}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                                                >
+                                                    Simpan
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
