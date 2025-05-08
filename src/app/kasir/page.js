@@ -23,7 +23,17 @@ export default function HomeBase() {
     const [products, setProducts] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [outlet, setoutlet] = useState("POS");
+    const [inventory, setInventory] = useState([]);
 
+    const fetchInventory = async () => {
+        const snapshot = await getDocs(collection(db, 'Inventory'));
+        const result = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        // setInventory(result);
+        localStorage.setItem('inventory', JSON.stringify(result));
+    };
 
     const fetchCategories = async () => {
         const snapshot = await getDocs(collection(db, 'Category'));
@@ -77,6 +87,10 @@ export default function HomeBase() {
         const trapis = localStorage.getItem('terapis');
         if (trapis) {
             setEmployees(JSON.parse(trapis));
+        }
+        const inventory = localStorage.getItem('inventory');
+        if (inventory) {
+            setInventory(JSON.parse(inventory));
         }
 
         const storedCart = localStorage.getItem('cart');
@@ -182,17 +196,18 @@ export default function HomeBase() {
         const confirmed = window.confirm(
             "PERHATIAN!\n\nMelakukan update data akan me-refresh kasir ini secara otomatis dan mengambil data terbaru dari server.\n\nSilakan CEK KEMBALI apakah ada layanan, harga, atau data lain yang berubah setelah update.\n\nLanjutkan update?"
         );
-    
+
         if (!confirmed) return;
-    
+
         await fetchCategories();
         await fetchServices();
         await fetchTerapis();
-    
+        await fetchInventory();
+
         alert("Data berhasil diperbarui dari server.");
         window.location.reload();
     };
-    
+
 
     const confirmPayment = () => {
         if (!customerName.trim() || !customerPhone.trim()) {
@@ -488,8 +503,71 @@ export default function HomeBase() {
                                                 placeholder="Harga"
                                                 value={editForm.price}
                                                 onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
-                                                className="w-full border px-3 py-2 mb-4"
+                                                className="w-full border px-3 py-2  mb-4"
                                             />
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Warna Latar</label>
+                                                <select
+                                                    value={editForm.bg}
+                                                    onChange={(e) => setEditForm({ ...editForm, bg: e.target.value })}
+                                                    className="w-full mt-1 border p-2 rounded  mb-4"
+                                                >
+                                                    <option value="bg-blue-400">Biru</option>
+                                                    <option value="bg-green-400">Hijau</option>
+                                                    <option value="bg-red-400">Merah</option>
+                                                    <option value="bg-yellow-400">Kuning</option>
+                                                    <option value="bg-purple-400">Ungu</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-4">Bahan yang digunakan</label>
+                                                <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border p-2 rounded">
+                                                    {inventory.map((item) => {
+                                                        const isChecked = editForm.ingredients.some((ing) => ing.id === item.id);
+                                                        const amount = editForm.ingredients.find((ing) => ing.id === item.id)?.amount || 1;
+                                                        return (
+                                                            <label key={item.id} className="flex items-center justify-between space-x-2">
+                                                                <div className="flex items-center space-x-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isChecked}
+                                                                        onChange={(e) => {
+                                                                            const checked = e.target.checked;
+                                                                            setEditForm((prevForm) => {
+                                                                                let updatedIngredients = [...prevForm.ingredients];
+                                                                                if (checked) {
+                                                                                    updatedIngredients.push({ id: item.id, amount: 1 });
+                                                                                } else {
+                                                                                    updatedIngredients = updatedIngredients.filter((ing) => ing.id !== item.id);
+                                                                                }
+                                                                                return { ...prevForm, ingredients: updatedIngredients };
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                    <span>{`${item.nama} ( ${item.qty} Sisa Pemakaian )`}</span>
+                                                                </div>
+                                                                {isChecked && (
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        value={amount}
+                                                                        onChange={(e) => {
+                                                                            const value = parseFloat(e.target.value) || 1;
+                                                                            setEditForm((prevForm) => ({
+                                                                                ...prevForm,
+                                                                                ingredients: prevForm.ingredients.map((ing) =>
+                                                                                    ing.id === item.id ? { ...ing, amount: value } : ing
+                                                                                ),
+                                                                            }));
+                                                                        }}
+                                                                        className="w-16 border p-1 rounded text-right"
+                                                                    />
+                                                                )}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
                                             <div className="flex justify-end space-x-2">
                                                 <button onClick={() => setEditForm(null)} className="px-4 py-2 border rounded">
                                                     Batal
