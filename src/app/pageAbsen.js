@@ -73,7 +73,7 @@ export default function Absensi() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold mb-6 text-blue-600">D`Style Absensi</h1>
+        <h1 className="text-2xl font-bold mb-6 text-blue-600">Absensi</h1>
 
         <input
           type="text"
@@ -115,6 +115,12 @@ export default function Absensi() {
         {message && (
           <p className="mt-4 text-center text-red-500 font-medium">{message}</p>
         )}
+        <button
+          className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 mt-5"
+          onClick={() => window.history.back()}
+        >
+          Kembali
+        </button>
       </div>
     </main>
   );

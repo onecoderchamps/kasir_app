@@ -73,7 +73,7 @@ export default function Login() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold mb-6 text-blue-600">D`Style Management</h1>
+        <h1 className="text-2xl font-bold mb-6 text-blue-600">Kasir</h1>
 
         <input
           type="text"
@@ -99,13 +99,12 @@ export default function Login() {
             <button
               key={key}
               onClick={() => handleKeypadClick(key)}
-              className={`p-4 rounded-lg text-white font-semibold transition ${
-                key === 'OK'
-                  ? 'bg-green-500 hover:bg-green-600'
-                  : key === 'DEL'
+              className={`p-4 rounded-lg text-white font-semibold transition ${key === 'OK'
+                ? 'bg-green-500 hover:bg-green-600'
+                : key === 'DEL'
                   ? 'bg-red-500 hover:bg-red-600'
                   : 'bg-blue-500 hover:bg-blue-600'
-              }`}
+                }`}
             >
               {key}
             </button>
@@ -115,6 +114,12 @@ export default function Login() {
         {message && (
           <p className="mt-4 text-center text-red-500 font-medium">{message}</p>
         )}
+        <button
+          className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 mt-5"
+          onClick={() => window.history.back()}
+        >
+          Kembali
+        </button>
       </div>
     </main>
   );
