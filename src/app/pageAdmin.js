@@ -38,7 +38,7 @@ export default function AdminLogin() {
 
   const handleKeypadClick = (value) => {
     if (value === 'DEL') {
-      setPin((prev) => prev.slice(0, -1));
+      setPin('');
     } else if (value === 'OK') {
       handleLogin();
     } else if (pin.length < 6) {
