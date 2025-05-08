@@ -3,16 +3,17 @@ import TerapisTable from "./terapis";
 import CategoryTable from "./category";
 import OutletTable from "./outlet";
 import ServiceTable from "./layanan";
+import InventoryTable from "./inventory";
 import UserTable from "./kasir";
 import Omset from "./omset";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../api/firebase";
 
-const menuItems = ["Laporan", "Category", "Outlet", "Layanan", "Terapis", "Kasir"];
+const menuItems = ["Laporan", "Kategori", "Outlet", "Layanan", "Inventory", "Terapis", "Kasir"];
 
 export default function HomePage() {
-    const [active, setActive] = useState("Category");
+    const [active, setActive] = useState("Laporan");
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -72,7 +73,7 @@ export default function HomePage() {
 
     const renderContent = () => {
         switch (active) {
-            case "Category":
+            case "Kategori":
                 return <CategoryTable />;
             case "Layanan":
                 return <ServiceTable />
@@ -80,6 +81,8 @@ export default function HomePage() {
                 return <TerapisTable />;
             case "Outlet":
                 return <OutletTable />;
+            case "Inventory":
+                return <InventoryTable />;
             case "Kasir":
                 return <UserTable />;
             case "Laporan":

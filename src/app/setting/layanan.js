@@ -11,27 +11,30 @@ import {
     Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../api/firebase';
-
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function ServiceTable() {
     const [services, setServices] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [inventory, setInventory] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editId, setEditId] = useState(null);
     const [openCategory, setOpenCategory] = useState(null);
+
     const [form, setForm] = useState({
         name: '',
         price: 0,
         bg: 'bg-blue-400',
         desc: '',
         idCategory: '',
+        ingredients: [],
         createdAt: Timestamp.now(),
     });
 
     useEffect(() => {
         fetchData();
         fetchCategories();
+        fetchInventory();
     }, []);
 
     const fetchData = async () => {
@@ -48,10 +51,8 @@ export default function ServiceTable() {
           );
         setServices(result);
       };
-      
-      
 
-    const fetchCategories = async () => {
+      const fetchCategories = async () => {
         const snapshot = await getDocs(collection(db, 'Category'));
         const result = snapshot.docs
           .map((doc) => ({
@@ -65,11 +66,18 @@ export default function ServiceTable() {
           );
         setCategories(result);
       };
-      
+
+    const fetchInventory = async () => {
+        const snapshot = await getDocs(collection(db, 'Inventory'));
+        const result = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        setInventory(result);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (editId) {
             await updateDoc(doc(db, 'Services', editId), form);
         } else {
@@ -82,6 +90,7 @@ export default function ServiceTable() {
             bg: 'bg-blue-400',
             desc: '',
             idCategory: '',
+            ingredients: [],
             createdAt: Timestamp.now(),
         });
         setEditId(null);
@@ -96,7 +105,10 @@ export default function ServiceTable() {
     };
 
     const handleEdit = (item) => {
-        setForm(item);
+        setForm({
+            ...item,
+            ingredients: item.ingredients || [],
+        });
         setEditId(item.id);
         setIsModalOpen(true);
     };
@@ -108,6 +120,7 @@ export default function ServiceTable() {
             bg: 'bg-blue-400',
             desc: '',
             idCategory: '',
+            ingredients: [],
             createdAt: Timestamp.now(),
         });
         setEditId(null);
@@ -119,7 +132,7 @@ export default function ServiceTable() {
     };
 
     return (
-        <div className="mx-auto ">
+        <div className="mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">Manajemen Layanan</h2>
                 <button
@@ -157,26 +170,26 @@ export default function ServiceTable() {
                                         filteredServices.map((item) => (
                                             <div
                                                 key={item.id}
-                                                className="border rounded-xl p-4 shadow-sm hover:shadow-md transition bg-white flex flex-col justify-between"
+                                                className={`border rounded-xl p-4 shadow-sm hover:shadow-md transition ${item.bg} text-white`}
                                             >
                                                 <div>
-                                                    <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
-                                                    <p className="text-sm text-gray-600 mt-1">{item.desc}</p>
+                                                    <h4 className="text-lg font-semibold text-white">{item.name}</h4>
+                                                    <p className="text-sm text-white mt-1">{item.desc}</p>
                                                 </div>
                                                 <div className="mt-4 flex justify-between items-center">
-                                                    <span className="text-blue-600 font-bold">
+                                                    <span className="text-white font-bold">
                                                         Rp {item.price.toLocaleString('id-ID')}
                                                     </span>
                                                     <div className="space-x-2">
                                                         <button
                                                             onClick={() => handleEdit(item)}
-                                                            className="text-sm text-blue-600 hover:underline"
+                                                            className="text-sm text-white hover:underline"
                                                         >
                                                             Edit
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(item.id)}
-                                                            className="text-sm text-red-600 hover:underline"
+                                                            className="text-sm text-white hover:underline"
                                                         >
                                                             Hapus
                                                         </button>
@@ -187,16 +200,14 @@ export default function ServiceTable() {
                                     )}
                                 </div>
                             )}
-
                         </div>
                     );
                 })}
             </div>
 
-            {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 transition">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg animate-fade-in">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
                         <h3 className="text-xl font-bold mb-4">
                             {editId ? 'Edit Layanan' : 'Tambah Layanan'}
                         </h3>
@@ -207,7 +218,7 @@ export default function ServiceTable() {
                                     type="text"
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    className="w-full mt-1 border p-2 rounded focus:ring focus:ring-blue-200"
+                                    className="w-full mt-1 border p-2 rounded"
                                     required
                                 />
                             </div>
@@ -217,23 +228,35 @@ export default function ServiceTable() {
                                     type="number"
                                     value={form.price}
                                     onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) })}
-                                    className="w-full mt-1 border p-2 rounded focus:ring focus:ring-blue-200"
+                                    className="w-full mt-1 border p-2 rounded"
                                     required
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Warna Latar</label>
+                                <select
+                                    value={form.bg}
+                                    onChange={(e) => setForm({ ...form, bg: e.target.value })}
+                                    className="w-full mt-1 border p-2 rounded"
+                                >
+                                    <option value="bg-blue-400">Biru</option>
+                                    <option value="bg-green-400">Hijau</option>
+                                    <option value="bg-red-400">Merah</option>
+                                    <option value="bg-yellow-400">Kuning</option>
+                                    <option value="bg-purple-400">Ungu</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Kategori</label>
                                 <select
                                     value={form.idCategory}
                                     onChange={(e) => setForm({ ...form, idCategory: e.target.value })}
-                                    className="w-full mt-1 border p-2 rounded focus:ring focus:ring-blue-200"
+                                    className="w-full mt-1 border p-2 rounded"
                                     required
                                 >
                                     <option value="" disabled>Pilih Kategori</option>
                                     {categories.map((cat) => (
-                                        <option key={cat.id} value={cat.id}>
-                                            {cat.name}
-                                        </option>
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -242,9 +265,40 @@ export default function ServiceTable() {
                                 <textarea
                                     value={form.desc}
                                     onChange={(e) => setForm({ ...form, desc: e.target.value })}
-                                    className="w-full mt-1 border p-2 rounded focus:ring focus:ring-blue-200"
-                                    required
+                                    className="w-full mt-1 border p-2 rounded"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Bahan yang digunakan</label>
+                                <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border p-2 rounded">
+                                    {inventory.map((item) => {
+                                        const isChecked = form.ingredients.some((ing) => ing.id === item.id);
+                                        const amount = form.ingredients.find((ing) => ing.id === item.id)?.amount || 1;
+                                        return (
+                                            <label key={item.id} className="flex items-center justify-between space-x-2">
+                                                <div className="flex items-center space-x-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            setForm((prevForm) => {
+                                                                let updatedIngredients = [...prevForm.ingredients];
+                                                                if (checked) {
+                                                                    updatedIngredients.push({ id: item.id, amount: 1 });
+                                                                } else {
+                                                                    updatedIngredients = updatedIngredients.filter((ing) => ing.id !== item.id);
+                                                                }
+                                                                return { ...prevForm, ingredients: updatedIngredients };
+                                                            });
+                                                        }}
+                                                    />
+                                                    <span>{`${item.nama} (${item.qty} ${item.satuan})`}</span>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button
