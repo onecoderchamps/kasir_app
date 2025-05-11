@@ -9,6 +9,8 @@ import Absensi from "./app/pageAbsen";
 import AbsensiPage from "./app/absensi/page";
 import HomeDefaultPage from "./app/page";
 import AdminLogin from "./app/pageAdmin";
+import AdminKasir from "./app/kasir/setting/page";
+
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
         <Route path="/omset" element={<OmzetReport />} />
         <Route path="/setting" element={<HomePage />} />
         <Route path="/history" element={<History />} />
+        <Route path="/settingKasir" element={<AdminKasir />} />
+
       </Routes>
     </BrowserRouter>
   );

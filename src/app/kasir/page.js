@@ -6,6 +6,8 @@ import Select from "react-select";
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../api/firebase';
 
+const idOutlet = localStorage.getItem('idOutlet');
+
 export default function HomeBase() {
     const [cart, setCart] = useState([]);
     const [showModal, setShowModal] = useState(false);
@@ -26,7 +28,8 @@ export default function HomeBase() {
     const [inventory, setInventory] = useState([]);
 
     const fetchInventory = async () => {
-        const snapshot = await getDocs(collection(db, 'Inventory'));
+        const q = query(collection(db, 'Inventory'), where('idOutlet', '==', idOutlet));
+        const snapshot = await getDocs(q);
         const result = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
@@ -36,7 +39,8 @@ export default function HomeBase() {
     };
 
     const fetchCategories = async () => {
-        const snapshot = await getDocs(collection(db, 'Category'));
+        const q = query(collection(db, 'Category'), where('idOutlet', '==', idOutlet));
+        const snapshot = await getDocs(q);
         const result = snapshot.docs
             .map((doc) => ({
                 id: doc.id,
@@ -49,7 +53,8 @@ export default function HomeBase() {
     };
 
     const fetchServices = async () => {
-        const snapshot = await getDocs(collection(db, 'Services'));
+        const q = query(collection(db, 'Services'), where('idOutlet', '==', idOutlet));
+            const snapshot = await getDocs(q);
         const result = snapshot.docs
             .map((doc) => ({
                 id: doc.id,
@@ -340,7 +345,7 @@ export default function HomeBase() {
             <header className="flex justify-between items-center mb-6">
                 {/* Kiri */}
                 <div className="text-2xl font-bold m-4">
-                    Kasir Outlet {outlet}
+                    Kasir
                 </div>
 
                 {/* Kanan */}
@@ -378,22 +383,22 @@ export default function HomeBase() {
                     </button>
 
                     {/* Laporan Icon */}
-                    <button
+                    {/* <button
                         title="Laporan"
                         className="hover:text-blue-500 cursor-pointer"
                         onClick={() => window.location.href = '/omset'}
                     >
                         <ChartBarIcon className="h-6 w-6" />
-                    </button>
+                    </button> */}
 
                     {/* Laporan Icon */}
-                    {/* <button
+                    <button
                         title="Pengaturan"
                         className="hover:text-blue-500 cursor-pointer"
-                        onClick={() => window.location.href = '/setting'}
+                        onClick={() => window.location.href = '/settingKasir'}
                     >
                         <Cog6ToothIcon className="h-6 w-6" />
-                    </button> */}
+                    </button>
 
                     {/* Akun Icon */}
                     <button
@@ -544,7 +549,7 @@ export default function HomeBase() {
                                                                             });
                                                                         }}
                                                                     />
-                                                                    <span>{`${item.nama} ( ${item.qty} Sisa Pemakaian )`}</span>
+                                                                    <span>{`${item.nama}`}</span>
                                                                 </div>
                                                                 {isChecked && (
                                                                     <input
