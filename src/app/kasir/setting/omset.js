@@ -8,8 +8,8 @@ const idOutlet = localStorage.getItem('idOutlet');
 export default function OmzetReport() {
   const [pivotData, setPivotData] = useState([]);
   const [names, setNames] = useState([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [selectedOutlet, setSelectedOutlet] = useState('');

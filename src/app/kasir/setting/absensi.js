@@ -1,193 +1,210 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import {
-  collection,
-  getDocs,
-  addDoc,
-  deleteDoc,
-  updateDoc,
-  doc,
-  where,
-  query,
-} from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { collection, getDocs, query, where, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../api/firebase';
 
 const idOutlet = localStorage.getItem('idOutlet');
 
+// Utility: Ambil array tanggal antara dua tanggal
+const getDateRange = (start, end) => {
+  const dates = [];
+  const current = new Date(start);
+  const last = new Date(end);
 
-export default function Absensi() {
-  const [outlets, setOutlets] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({
-    name: '',
-    bg: 'bg-blue-400',
-    createdAt: new Date(),
-  });
+  while (current <= last) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
+};
+
+function App() {
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [absensi, setAbsensi] = useState([]);
+  const [terapis, setTerapis] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Refactored fetchData agar bisa dipanggil ulang
+  const fetchData = async () => {
+    if (!startDate || !endDate || !idOutlet) return;
+
+    setLoading(true);
+    try {
+      const absensiQuery = query(
+        collection(db, 'Absensi'),
+        where('idOutlet', '==', idOutlet),
+        where('tanggal', '>=', startDate),
+        where('tanggal', '<=', endDate)
+      );
+      const absensiSnapshot = await getDocs(absensiQuery);
+      const absensiData = absensiSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+
+      const terapisQuery = query(
+        collection(db, 'Terapis'),
+        where('idOutlet', '==', idOutlet)
+      );
+      const terapisSnapshot = await getDocs(terapisQuery);
+      const terapisData = terapisSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        idUser: doc.id,
+      }));
+
+      setAbsensi(absensiData);
+      setTerapis(terapisData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [startDate, endDate]);
 
-  const fetchData = async () => {
-    const q = query(collection(db, 'Absensi'), where('idOutlet', '==', idOutlet));
-    const snapshot = await getDocs(q);
-    const result = snapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
-    setOutlets(result);
-  };
+  const dates = getDateRange(startDate, endDate);
 
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (editId) {
-      const { name, bg } = form; // exclude createdAt
-      await updateDoc(doc(db, 'Category', editId), { name, bg });
-    } else {
-      await addDoc(collection(db, 'Category'), {
-        ...form,
-        idOutlet,
-        createdAt: new Date(),
-      });
+  const handleStatusChange = async (e, userId, date, absensiId) => {
+    const newStatus = e.target.value;
+    try {
+      if (absensiId) {
+        const absensiRef = doc(db, 'Absensi', absensiId);
+        await updateDoc(absensiRef, { status: newStatus });
+        console.log('Absensi berhasil diupdate!');
+      } else {
+        await addDoc(collection(db, 'Absensi'), {
+          idUser: userId,
+          tanggal: date,
+          status: newStatus,
+          idOutlet: idOutlet,
+        });
+        console.log('Absensi berhasil ditambahkan!');
+      }
+      fetchData(); // Refresh data setelah update/tambah
+    } catch (error) {
+      console.error('Error updating/adding absensi:', error);
     }
+  };
 
-    setForm({
-      name: '',
-      bg: 'bg-blue-400',
-      createdAt: new Date(),
+  const buildTableData = () => {
+    return terapis.map((t) => {
+      const row = { name: t.name };
+      dates.forEach((date) => {
+        const match = absensi.find((a) => a.idUser === t.idUser && a.tanggal === date);
+
+        if (match) {
+          if (match.status === 'Hadir' && match.jamMasuk) {
+            const jamMasuk = new Date(match.jamMasuk.seconds * 1000).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+
+            row[date] = <div className="text-green-600 font-medium">{jamMasuk}</div>;
+          } else {
+            row[date] = (
+              <select
+                className="border rounded p-1 text-sm"
+                value={match.status || ''}
+                onChange={(e) => handleStatusChange(e, t.idUser, date, match.id)}
+                disabled={match.status === 'Hadir'}
+              >
+                <option value="" disabled>Pilih</option>
+                <option value="Hadir">Hadir</option>
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+                <option value="Absen">Absen</option>
+                <option value="Cuti">Cuti</option>
+              </select>
+            );
+          }
+        } else {
+          row[date] = (
+            <select
+              className="border rounded p-1 text-sm"
+              defaultValue=""
+              onChange={(e) => handleStatusChange(e, t.idUser, date)}
+            >
+              <option value="" disabled>Pilih</option>
+              <option value="Hadir">Hadir</option>
+              <option value="Izin">Izin</option>
+              <option value="Sakit">Sakit</option>
+              <option value="Absen">Absen</option>
+              <option value="Cuti">Cuti</option>
+            </select>
+          );
+        }
+      });
+      return row;
     });
-    setEditId(null);
-    setIsModalOpen(false);
-    fetchData();
   };
 
+  const tableData = buildTableData();
 
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Apakah Anda yakin ingin menghapus outlet ini?');
-    if (!confirmDelete) return;
-
-    await deleteDoc(doc(db, 'Category', id));
-    fetchData();
-  };
-
-  const handleEdit = (item) => {
-    setForm(item);
-    setEditId(item.id);
-    setIsModalOpen(true);
-  };
-
-  const openNewModal = () => {
-    setForm({
-      name: '',
-      bg: 'bg-blue-400',
-      createdAt: new Date(),
-    });
-    setEditId(null);
-    setIsModalOpen(true);
+  const formatDate = (date) => {
+    return new Date(date).getDate().toString().padStart(2, '0');
   };
 
   return (
-    <div className="mx-auto h-screen">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Manajemen Kategory</h2>
-        <button
-          onClick={openNewModal}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Tambah Kategori
-        </button>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <h1 className="text-2xl font-bold mb-4">Rekap Absensi Terapis</h1>
+
+      <div className="flex gap-4 mb-6">
+        <div>
+          <label className="block mb-1">Start Date</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="border p-2 rounded"
+          />
+        </div>
+        <div>
+          <label className="block mb-1">End Date</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="border p-2 rounded"
+          />
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <table className="w-full border table-auto text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border">Nama</th>
-              {/* <th className="p-2 border">Latar Belakang</th> */}
-              <th className="p-2 border">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {outlets.length === 0 ? (
+      {loading ? (
+        <div className="text-center text-gray-600">Loading data...</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="table-auto border-collapse w-full">
+            <thead>
               <tr>
-                <td colSpan="3" className="p-4 text-center text-gray-500">
-                  Belum ada kategori. Silakan tambahkan data.
-                </td>
+                <th className="border px-4 py-2 bg-gray-200">Nama</th>
+                {dates.map((date) => (
+                  <th key={date} className="border px-4 py-2 bg-gray-100">
+                    {formatDate(date)}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              outlets.map((item) => (
-                <tr key={item.id} className="text-center">
-                  <td className="border p-2">{item.name}</td>
-                  {/* <td className="border p-2">{item.bg}</td> */}
-                  <td className="border p-2 space-x-2">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Hapus
-                    </button>
-                  </td>
+            </thead>
+            <tbody>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>
+                  <td className="border px-4 py-2 font-semibold">{row.name}</td>
+                  {dates.map((date) => (
+                    <td key={`${idx}-${date}`} className="border px-4 py-2 text-center">
+                      {row[date]}
+                    </td>
+                  ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-bold mb-4">{editId ? 'Edit' : 'Tambah'} Kategori</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <label className="block text-sm font-medium text-gray-700">Nama</label>
-              <input
-                type="text"
-                placeholder="Nama Kategori"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border p-2 rounded"
-                required
-              />
-              {/* <input
-                type="text"
-                placeholder="Latar Belakang (contoh: bg-blue-400)"
-                value={form.bg}
-                onChange={(e) => setForm({ ...form, bg: e.target.value })}
-                className="w-full border p-2 rounded"
-                required
-              /> */}
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded border border-gray-400"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  {editId ? 'Update' : 'Simpan'}
-                </button>
-              </div>
-            </form>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
   );
 }
+
+export default App;

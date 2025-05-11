@@ -7,9 +7,11 @@ import InventoryTable from "./inventory";
 import Omset from "./omset";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../api/firebase";
+import Absensi from "./absensi";
 
 const menuItems = [
-    "Laporan", 
+    "Laporan Absensi", 
+    "Laporan Omzet",
     "Kategori Layanan", 
     "Layanan",
     "Inventory", 
@@ -75,6 +77,8 @@ export default function HomePage() {
 
     const renderContent = () => {
         switch (active) {
+            case "Laporan Absensi":
+                return <Absensi />;
             case "Kategori Layanan":
                 return <CategoryTable />;
             case "Layanan":
@@ -85,7 +89,7 @@ export default function HomePage() {
                 return <OutletTable />;
             case "Inventory":
                 return <InventoryTable />;
-            case "Laporan":
+            case "Laporan Omzet":
                 return <Omset />;
             case "Bank":
                 return <p>Ini adalah konten untuk <strong>Bank</strong>.</p>;
