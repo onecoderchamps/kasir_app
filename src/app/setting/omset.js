@@ -1,18 +1,57 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, Timestamp, where } from 'firebase/firestore';
 import { db } from '../../api/firebase';
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
-
 
 export default function OmzetReport() {
   const [pivotData, setPivotData] = useState([]);
   const [names, setNames] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState([]);
-  const [selectedOutlet, setSelectedOutlet] = useState('');
+  const [selectedOutlet, setSelectedOutlet] = useState('all');
   const [outlet, setOutlet] = useState([]);
+
+  // Ambil outlet
+  useEffect(() => {
+    const fetchOutlet = async () => {
+      const snapshot = await getDocs(collection(db, 'Outlet'));
+      const fetched = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+      setOutlet(fetched);
+    };
+    fetchOutlet();
+  }, []);
+
+  // Ambil kategori berdasarkan selectedOutlet
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!selectedOutlet || selectedOutlet === 'all') {
+        setCategories([]);
+        setSelectedCategory('all');
+        return;
+      }
+
+      const q = query(
+        collection(db, 'Category'),
+        where('idOutlet', '==', selectedOutlet)
+      );
+      const snapshot = await getDocs(q);
+      const fetched = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+      setCategories(fetched);
+      setSelectedCategory('all');
+    };
+    fetchCategories();
+  }, [selectedOutlet]);
 
   // Cek sesi login
   useEffect(() => {
@@ -22,7 +61,6 @@ export default function OmzetReport() {
     if (uid && loginDate) {
       const today = new Date();
       const login = new Date(loginDate);
-
       const sameDay =
         today.getFullYear() === login.getFullYear() &&
         today.getMonth() === login.getMonth() &&
@@ -40,39 +78,6 @@ export default function OmzetReport() {
     }
   }, []);
 
-  // Ambil kategori dari Firebase
-  useEffect(() => {
-    const fetchCategories = async () => {
-      const snapshot = await getDocs(collection(db, 'Category'));
-      const fetched = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
-      setCategories(fetched);
-      setSelectedCategory(fetched[0]?.id || '');
-    };
-    fetchCategories();
-  }, []);
-
-  // Ambil kategori dari Firebase
-  useEffect(() => {
-    const fetchOutlet = async () => {
-      const snapshot = await getDocs(collection(db, 'Outlet'));
-      const fetched = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
-      setOutlet(fetched);
-      setSelectedOutlet(fetched[0]?.id || '');
-    };
-    fetchOutlet();
-  }, []);
-
-  // Fungsi utility
   function getServedRevenue(transactions, categoryId) {
     const result = [];
 
@@ -87,7 +92,7 @@ export default function OmzetReport() {
           result.push({
             name: server,
             revenue: revenuePerPerson,
-            date: new Date(transaction.date).toLocaleDateString('en-CA'), // YYYY-MM-DD
+            date: new Date(transaction.date).toLocaleDateString('en-CA'),
           });
         });
       });
@@ -132,7 +137,6 @@ export default function OmzetReport() {
       return row;
     });
 
-    // Baris total akhir
     const totalRow = { date: 'Total', total: 0 };
     sortedNames.forEach((name) => {
       const totalPerName = rows.reduce((acc, row) => acc + (row[name] || 0), 0);
@@ -145,37 +149,44 @@ export default function OmzetReport() {
     return { rows, sortedNames };
   }
 
-  // Fetch data transaksi dari Firebase berdasarkan filter
   const fetchReport = async () => {
-    if (!startDate || !endDate || !selectedCategory) return;
+    if (!startDate || !endDate) return;
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // sampai akhir hari
+    end.setHours(23, 59, 59, 999);
 
-    const transaksiRef = collection(db, 'Transaksi');
-    const q = query(
-      transaksiRef,
+    let q = query(
+      collection(db, 'Transaksi'),
       where('date', '>=', Timestamp.fromDate(start)),
-      where('date', '<=', Timestamp.fromDate(end)),
-      where('idOutlet', '==', selectedOutlet)
+      where('date', '<=', Timestamp.fromDate(end))
     );
 
-    const snapshot = await getDocs(q);
-    const transactions = snapshot.docs
-      .map((doc) => {
-        const data = doc.data();
-        // Pastikan t.date adalah objek Timestamp, gunakan toDate() jika perlu
-        return {
-          ...data,
-          date: data.date?.toDate?.() ?? new Date(data.date.seconds * 1000),
-        };
-      })
-      .filter((t) =>
-        t.cart.some((item) => item.idCategory === selectedCategory)
-      );
+    if (selectedOutlet !== 'all') {
+      q = query(q, where('idOutlet', '==', selectedOutlet));
+    }
 
-    const servedRevenue = getServedRevenue(transactions, selectedCategory);
+    const snapshot = await getDocs(q);
+    const transactions = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        ...data,
+        date: data.date?.toDate?.() ?? new Date(data.date.seconds * 1000),
+      };
+    });
+
+    const filteredTransactions =
+      selectedCategory === 'all'
+        ? transactions
+        : transactions.filter((t) =>
+            t.cart.some((item) => item.idCategory === selectedCategory)
+          );
+
+    const servedRevenue = getServedRevenue(
+      filteredTransactions,
+      selectedCategory === 'all' ? null : selectedCategory
+    );
+
     const { rows, sortedNames } = buildPivot(servedRevenue, startDate, endDate);
     setPivotData(rows);
     setNames(sortedNames);
@@ -183,7 +194,6 @@ export default function OmzetReport() {
 
   return (
     <main>
-
       <div className="flex flex-wrap gap-4 mb-4 items-end mt-4">
         <div>
           <label className="block text-sm font-medium">Start Date</label>
@@ -204,29 +214,31 @@ export default function OmzetReport() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Kategori</label>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="border p-2 rounded"
-          >
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
           <label className="block text-sm font-medium">Outlet</label>
           <select
             value={selectedOutlet}
             onChange={(e) => setSelectedOutlet(e.target.value)}
             className="border p-2 rounded"
           >
+            <option value="all">Pilih Semua</option>
             {outlet.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.nama}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Kategori</label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="border p-2 rounded"
+          >
+            <option value="all">Pilih Semua</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
               </option>
             ))}
           </select>

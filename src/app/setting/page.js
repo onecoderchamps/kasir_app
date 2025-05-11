@@ -9,13 +9,12 @@ import Omset from "./omset";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../api/firebase";
+import App from "./absensi";
 
 const menuItems = [
-    "Laporan", 
-    "Kategori Layanan", 
-    "Layanan", 
-    "Outlet", 
-    "Inventory", 
+    "Laporan Omset",
+    "Laporan Absensi",
+    "Outlet",
     "Terapis", 
     "Kasir"
 ];
@@ -81,19 +80,15 @@ export default function HomePage() {
 
     const renderContent = () => {
         switch (active) {
-            case "Kategori Layanan":
-                return <CategoryTable />;
-            case "Layanan":
-                return <ServiceTable />
+            case "Laporan Absensi":
+                return <App />;
             case "Terapis":
                 return <TerapisTable />;
             case "Outlet":
                 return <OutletTable />;
-            case "Inventory":
-                return <InventoryTable />;
             case "Kasir":
                 return <UserTable />;
-            case "Laporan":
+            case "Laporan Omset":
                 return <Omset />;
             case "Bank":
                 return <p>Ini adalah konten untuk <strong>Bank</strong>.</p>;

@@ -9,11 +9,16 @@ import {
     deleteDoc,
     doc,
     Timestamp,
+    query,
+    where,
 } from 'firebase/firestore';
 import { db } from '../../api/firebase';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
+const idOutlet = localStorage.getItem('idOutlet');
+
 export default function ServiceTable() {
+
     const [services, setServices] = useState([]);
     const [categories, setCategories] = useState([]);
     const [inventory, setInventory] = useState([]);
@@ -38,37 +43,40 @@ export default function ServiceTable() {
     }, []);
 
     const fetchData = async () => {
-        const snapshot = await getDocs(collection(db, 'Services'));
+        const q = query(collection(db, 'Services'), where('idOutlet', '==', idOutlet));
+        const snapshot = await getDocs(q);
         const result = snapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .sort(
-            (a, b) =>
-              new Date(a.createdAt?.toDate?.() || a.createdAt) -
-              new Date(b.createdAt?.toDate?.() || b.createdAt)
-          );
+            .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }))
+            .sort(
+                (a, b) =>
+                    new Date(a.createdAt?.toDate?.() || a.createdAt) -
+                    new Date(b.createdAt?.toDate?.() || b.createdAt)
+            );
         setServices(result);
-      };
+    };
 
-      const fetchCategories = async () => {
-        const snapshot = await getDocs(collection(db, 'Category'));
+    const fetchCategories = async () => {
+        const q = query(collection(db, 'Category'), where('idOutlet', '==', idOutlet));
+        const snapshot = await getDocs(q);
         const result = snapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .sort(
-            (a, b) =>
-              new Date(a.createdAt?.toDate?.() || a.createdAt) -
-              new Date(b.createdAt?.toDate?.() || b.createdAt)
-          );
+            .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }))
+            .sort(
+                (a, b) =>
+                    new Date(a.createdAt?.toDate?.() || a.createdAt) -
+                    new Date(b.createdAt?.toDate?.() || b.createdAt)
+            );
         setCategories(result);
-      };
+    };
 
     const fetchInventory = async () => {
-        const snapshot = await getDocs(collection(db, 'Inventory'));
+        const q = query(collection(db, 'Inventory'), where('idOutlet', '==', idOutlet));
+        const snapshot = await getDocs(q);
         const result = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
@@ -81,7 +89,11 @@ export default function ServiceTable() {
         if (editId) {
             await updateDoc(doc(db, 'Services', editId), form);
         } else {
-            await addDoc(collection(db, 'Services'), form);
+            await addDoc(collection(db, 'Services'), {
+                ...form,
+                idOutlet,
+                createdAt: new Date(),
+            });
         }
 
         setForm({
