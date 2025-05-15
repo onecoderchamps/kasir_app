@@ -4,281 +4,287 @@ import { saveAs } from 'file-saver';
 import { collection, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../api/firebase';
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, PlusIcon } from '@heroicons/react/24/solid';
+
+const outlet = localStorage.getItem('idOutlet');
 
 export default function History() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [staffList, setStaffList] = useState([]);
+    const [servicesList, setServicesList] = useState([]);
 
-    const saveTransaksi = async () => {
-        const saved = localStorage.getItem('transactions');
-        let parsedTransactions = JSON.parse(saved);
-
-        setLoading(true);
-
-        try {
-            for (const trx of parsedTransactions) {
-                const dateObj = new Date(trx.date);
-                const trxWithTimestamp = {
-                    ...trx,
-                    date: Timestamp.fromDate(dateObj)
-                };
-
-                // Simpan transaksi ke Firestore
-                await setDoc(doc(collection(db, "Transaksi"), trx.id.toString()), trxWithTimestamp);
-
-                // Update inventory berdasarkan cart
-                for (const item of trx.cart) {
-                    if (!item.ingredients || !Array.isArray(item.ingredients)) continue;
-                    for (const ingredient of item.ingredients) {
-                        const ingredientRef = doc(db, 'Inventory', ingredient.id);
-                        const ingredientSnap = await getDoc(ingredientRef);
-
-                        if (ingredientSnap.exists()) {
-                            const currentData = ingredientSnap.data();
-                            const currentQty = currentData.qty || 0;
-
-                            const deduction = ingredient.amount * item.qty;
-                            const newQty = Math.max(currentQty - deduction, 0); // Hindari qty negatif
-
-                            await updateDoc(ingredientRef, {
-                                qty: newQty
-                            });
-                        } else {
-                            console.warn(`Ingredient ${ingredient.id} tidak ditemukan di Inventory.`);
-                        }
-                    }
-                }
-
-                // Hapus transaksi dari localStorage setelah berhasil disimpan
-                parsedTransactions = parsedTransactions.filter(item => item.id !== trx.id);
-                localStorage.setItem('transactions', JSON.stringify(parsedTransactions));
-                setTransactions(parsedTransactions);
-            }
-
-            alert("Semua transaksi berhasil disimpan ke Firebase dan stok dikurangi.");
-        } catch (error) {
-            console.error("Gagal menyimpan transaksi:", error);
-            alert("Gagal menyimpan transaksi. Lihat console untuk detail.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Cek sesi login
     useEffect(() => {
         const uid = localStorage.getItem('uid');
         const loginDate = localStorage.getItem('loginDate');
 
-        if (uid && loginDate) {
-            const today = new Date();
-            const login = new Date(loginDate);
-            const sameDay =
-                today.getFullYear() === login.getFullYear() &&
-                today.getMonth() === login.getMonth() &&
-                today.getDate() === login.getDate();
+        if (!uid || !loginDate) {
+            return window.location.href = '/';
+        }
 
-            if (!sameDay) {
-                localStorage.removeItem('uid');
-                localStorage.removeItem('loginDate');
-                window.location.href = '/';
-            }
-        } else {
+        const today = new Date();
+        const login = new Date(loginDate);
+        const sameDay = today.toDateString() === login.toDateString();
+
+        if (!sameDay) {
             localStorage.removeItem('uid');
             localStorage.removeItem('loginDate');
             window.location.href = '/';
         }
     }, []);
 
+    // Load data dari localStorage
     useEffect(() => {
-        const saved = localStorage.getItem('transactions');
-        if (saved) {
-            const parsedTransactions = JSON.parse(saved);
-            const sortedTransactions = parsedTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-            setTransactions(sortedTransactions);
+        try {
+            const saved = JSON.parse(localStorage.getItem('transactions')) || [];
+            const sorted = saved.sort((a, b) => new Date(b.date) - new Date(a.date));
+            setTransactions(sorted);
+
+            const staff = JSON.parse(localStorage.getItem('terapis')) || [];
+            setStaffList(staff);
+
+            const services = JSON.parse(localStorage.getItem('services')) || [];
+            setServicesList(services);
+        } catch (err) {
+            console.error("Gagal memuat data dari localStorage:", err);
         }
     }, []);
 
-    const deleteTransaction = (id) => {
-        const updatedTransactions = transactions.filter(tx => tx.id !== id);
-        setTransactions(updatedTransactions);
-        localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+    // Simpan transaksi ke Firestore
+    const saveTransaksi = async () => {
+        const saved = localStorage.getItem('transactions');
+        const parsed = JSON.parse(saved || '[]');
+        const failed = [];
+
+        setLoading(true);
+
+        for (const trx of parsed) {
+            try {
+                const trxData = {
+                    ...trx,
+                    date: Timestamp.fromDate(new Date(trx.date))
+                };
+
+                await setDoc(doc(collection(db, 'Transaksi'), trx.id.toString()), trxData);
+
+                for (const item of trx.cart || []) {
+                    for (const ingredient of item.ingredients || []) {
+                        const ref = doc(db, 'Inventory', ingredient.id);
+                        const snap = await getDoc(ref);
+
+                        if (snap.exists()) {
+                            const currentQty = snap.data().qty || 0;
+                            const newQty = Math.max(currentQty - (ingredient.amount * item.qty), 0);
+                            await updateDoc(ref, { qty: newQty });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Gagal simpan transaksi ID ${trx.id}:`, error);
+                failed.push(trx);
+            }
+        }
+
+        localStorage.setItem('transactions', JSON.stringify(failed));
+        setTransactions(failed);
+
+        alert(failed.length === 0
+            ? 'Semua transaksi berhasil disimpan.'
+            : `${failed.length} transaksi gagal disimpan. Lihat console untuk detail.`);
+
+        setLoading(false);
     };
 
-    const exportExcel = () => {
-        const data = transactions.map(tx => ({
-            ID: tx.id,
-            Tanggal: tx.date,
-            Customer: tx.customerName || '-',
-            Ponsel: tx.customerPhone || '-',
-            Layanan: tx.cart.map(item => `${item.name} (x${item.qty})`).join(', '),
-            Total: tx.total,
-            'Metode Pembayaran': tx.paymentMethod,
-            Bank: tx.bank?.name || '-',
-            'Uang Diterima': tx.cashGiven || '-',
-            'Kembalian': tx.change || '-'
-        }));
-
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Transaksi");
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        const fileData = new Blob([excelBuffer], { type: "application/octet-stream" });
-        saveAs(fileData, "riwayat_transaksi.xlsx");
+    // Handler perubahan field dan cart
+    const handleFieldChange = (txId, field, value) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const updatedTx = { ...tx, [field]: field === 'tip' ? parseInt(value) || 0 : value };
+                if (field === 'tip') updatedTx.total = (updatedTx.subtotal || 0) + updatedTx.tip;
+                return updatedTx;
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
     };
 
-    const printReceipt = (tx) => {
-        const newWindow = window.open('', '', 'width=400,height=600');
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>Struk Pembayaran</title>
-              <style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                h2 { text-align: center; }
-                .info { margin-bottom: 10px; }
-                .bold { font-weight: bold; }
-                .divider { border-top: 1px dashed #333; margin: 10px 0; }
-                .total { font-size: 18px; font-weight: bold; margin-top: 20px; }
-              </style>
-            </head>
-            <body>
-              <h2>STRUK PEMBAYARAN</h2>
-              <div class="info"><span class="bold">ID:</span> ${tx.id}</div>
-              <div class="info"><span class="bold">Tanggal:</span> ${tx.date}</div>
-              <div class="info"><span class="bold">Customer:</span> ${tx.customerName || '-'}</div>
-              <div class="info"><span class="bold">Ponsel:</span> ${tx.customerPhone || '-'}</div>
-              <div class="divider"></div>
-              <div class="info bold">Layanan:</div>
-              <ul>
-                ${tx.cart.map(item => `<li>${item.name} (x${item.qty}) - Rp ${item.price.toLocaleString()}</li>`).join('')}
-              </ul>
-              <div class="divider"></div>
-              ${tx.discount > 0 ? `
-                <div class="info"><span class="bold">Subtotal:</span> Rp ${tx.subtotal.toLocaleString()}</div>
-                <div class="info"><span class="bold">Diskon:</span> ${tx.coupon} - ${(tx.subtotal - tx.total).toLocaleString()}</div>
-              ` : ''}
-              <div class="info"><span class="bold">Metode Pembayaran:</span> ${tx.paymentMethod}</div>
-              ${tx.paymentMethod === 'Transfer' ? `
-                <div class="info"><span class="bold">Bank:</span> ${tx.bank?.name} (a.n ${tx.bank?.accountName})</div>
-              ` : ''}
-              ${tx.paymentMethod === 'Tunai' ? `
-                <div class="info"><span class="bold">Uang Diterima:</span> Rp ${parseInt(tx.cashGiven).toLocaleString()}</div>
-                <div class="info"><span class="bold">Kembalian:</span> Rp ${parseInt(tx.change).toLocaleString()}</div>
-              ` : ''}
-              <div class="total">Total: Rp ${tx.total.toLocaleString()}</div>
-              <div style="text-align:center; margin-top:30px;">Terima kasih!</div>
-            </body>
-          </html>
-        `);
-        newWindow.document.close();
-        newWindow.print();
+    const handlePriceChange = (txId, idx, value) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const cart = tx.cart.map((item, i) => i === idx ? { ...item, price: parseInt(value) } : item);
+                const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+                return { ...tx, cart, subtotal, total: subtotal + (tx.tip || 0) };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleServedByChange = (txId, idx, value) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const cart = tx.cart.map((item, i) => i === idx ? { ...item, servedBy: value } : item);
+                return { ...tx, cart };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleServiceChange = (txId, idx, serviceId) => {
+        const service = servicesList.find(s => s.id === serviceId);
+        if (!service) return;
+
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const cart = tx.cart.map((item, i) =>
+                    i === idx ? { ...item, ...service, serviceId: service.id } : item
+                );
+                const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+                return { ...tx, cart, subtotal, total: subtotal + (tx.tip || 0) };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleAddCartItem = (txId) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const newItem = {
+                    id: '', name: '', price: 0, qty: 1,
+                    bg: '', desc: '', idCategory: '',
+                    idOutlet: outlet, createdAt: Timestamp.now(),
+                    servedBy: '', ingredients: [], idTransaction: tx.id
+                };
+                return { ...tx, cart: [...tx.cart, newItem] };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleDeleteCartItem = (txId, idx) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const cart = tx.cart.filter((_, i) => i !== idx);
+                const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+                return { ...tx, cart, subtotal, total: subtotal + (tx.tip || 0) };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const formatDate = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    };
+
+    const handleDeleteTransaction = (txId) => {
+        if (!window.confirm('Yakin ingin menghapus transaksi ini?')) return;
+
+        const updated = transactions.filter(tx => tx.id !== txId);
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
     };
 
     return (
         <main className="p-6 bg-gray-50 min-h-screen">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => window.history.back()}
-                        className="flex items-center text-gray-700 hover:text-gray-900"
-                    >
-                        <ArrowLeftIcon className="h-5 w-5 mr-1" />
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => window.history.back()} className="text-gray-700 hover:text-gray-900">
+                        <ArrowLeftIcon className="h-5 w-5" />
                     </button>
-                    <h1 className="text-3xl font-bold text-gray-800">Transaksi</h1>
+                    <h1 className="text-2xl font-bold">Transaksi</h1>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                    {transactions.length > 0 && (
-                        <>
-                            <button
-                                onClick={exportExcel}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
-                            >
-                                Export Excel
-                            </button>
-                            <button
-                                onClick={saveTransaksi}
-                                disabled={loading}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
-                            >
-                                {loading ? "Menyimpan..." : "Update ke Server"}
-                            </button>
-                        </>
-                    )}
-                </div>
+                <button onClick={saveTransaksi} disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded">
+                    {loading ? 'Menyimpan...' : 'Update ke Server'}
+                </button>
             </div>
 
             {transactions.length === 0 ? (
-                <div className="text-center text-gray-500">Belum ada transaksi.</div>
+                <div className="text-gray-500 text-center">Belum ada transaksi.</div>
             ) : (
-                <>
-                    <div className="text-sm text-gray-500 mb-4">Transaksi Pending</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {transactions.map((tx) => (
-                            <div key={tx.id} className="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
-                                <div>
-                                    <div className="flex justify-between mb-2 text-sm text-gray-600">
-                                        <div className="font-semibold text-gray-800">ID: {tx.id}</div>
-                                        <div>{tx.date}</div>
-                                    </div>
-
-                                    <div className="mb-2">
-                                        <div className="font-medium text-gray-700">Customer:</div>
-                                        <div>{tx.customerName || '-'}</div>
-                                    </div>
-                                    <div className="mb-2">
-                                        <div className="font-medium text-gray-700">Ponsel:</div>
-                                        <div>{tx.customerPhone || '-'}</div>
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <div className="font-medium text-gray-700">Layanan:</div>
-                                        <ul className="list-disc list-inside text-gray-600 text-sm space-y-1">
+                <div className="overflow-auto">
+                    <table className="min-w-full border text-sm">
+                        <thead className="bg-gray-100 text-left">
+                            <tr>
+                                <th className="border p-2">Tanggal</th>
+                                <th className="border p-2">Customer</th>
+                                <th className="border p-2">No Hp</th>
+                                <th className="border p-2">Treatment & Staff</th>
+                                <th className="border p-2">Tip</th>
+                                <th className="border p-2">Total</th>
+                                <th className="border p-2">Metode</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {transactions.map(tx => (
+                                <tr key={tx.id} className="bg-white">
+                                    <td className="border p-2">{formatDate(tx.date)}</td>
+                                    <td className="border p-2">
+                                        <input type="text" value={tx.customerName || ''} onChange={(e) => handleFieldChange(tx.id, 'customerName', e.target.value)} className="border px-2 py-1 w-full rounded" />
+                                    </td>
+                                    <td className="border p-2">
+                                        <input type="text" value={tx.customerPhone || ''} onChange={(e) => handleFieldChange(tx.id, 'customerPhone', e.target.value)} className="border px-2 py-1 w-full rounded" />
+                                    </td>
+                                    <td className="border p-2">
+                                        <ul className="space-y-1">
                                             {tx.cart.map((item, idx) => (
-                                                <li key={idx}>
-                                                    {item.name} (x{item.qty}) - Rp {item.price.toLocaleString()}
+                                                <li key={idx} className="flex items-center gap-1">
+                                                    <select value={item.serviceId || ''} onChange={(e) => handleServiceChange(tx.id, idx, e.target.value)} className="border p-1 rounded w-44 text-sm">
+                                                        <option value="">Pilih Treatment</option>
+                                                        {servicesList.map(service => (
+                                                            <option key={service.id} value={service.id}>{service.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <select value={item.servedBy} onChange={(e) => handleServedByChange(tx.id, idx, e.target.value)} className="border p-1 rounded w-40 text-sm">
+                                                        <option value="">Pilih Staff</option>
+                                                        {staffList.map(staff => (
+                                                            <option key={staff.id} value={staff.name}>{staff.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    - Rp
+                                                    <input type="number" value={item.price} onChange={(e) => handlePriceChange(tx.id, idx, e.target.value)} className="ml-1 border p-1 w-24 text-sm rounded" />
+                                                    <button onClick={() => handleDeleteCartItem(tx.id, idx)} className="text-red-500 hover:text-red-700">
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
                                                 </li>
                                             ))}
+                                            <li>
+                                                <button onClick={() => handleAddCartItem(tx.id)} className="flex items-center text-blue-500 hover:text-blue-700 text-sm">
+                                                    <PlusIcon className="w-4 h-4 mr-1" /> Tambah
+                                                </button>
+                                            </li>
                                         </ul>
-                                    </div>
-
-                                    {tx?.discount !== 0 && (
-                                        <>
-                                            <div className="text-sm text-gray-600">SubTotal: Rp {tx?.subtotal?.toLocaleString()}</div>
-                                            <div className="text-sm text-gray-600">Diskon: {tx?.discount}%</div>
-                                        </>
-                                    )}
-
-                                    <div className="text-sm text-gray-800 mt-2 font-semibold">
-                                        Total Bayar: Rp {tx.total.toLocaleString()}
-                                    </div>
-
-                                    <div className="text-sm text-gray-700 mt-1">Metode: {tx.paymentMethod}</div>
-
-                                    {tx.paymentMethod === 'Transfer' && tx.bank && (
-                                        <div className="text-sm text-gray-700 mt-1">
-                                            Transfer ke: {tx.bank.name} (a.n {tx.bank.accountName})
-                                        </div>
-                                    )}
-
-                                    {tx.paymentMethod === 'Tunai' && (
-                                        <div className="text-sm text-gray-700 mt-1">
-                                            Tunai Diberikan: Rp {parseInt(tx.cashGiven).toLocaleString()}<br />
-                                            Kembalian: Rp {parseInt(tx.change).toLocaleString()}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="mt-4 flex gap-2">
-                                    <button onClick={() => printReceipt(tx)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
-                                        Cetak Struk
-                                    </button>
-                                    <button onClick={() => deleteTransaction(tx.id)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
-                                        Hapus
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </>
+                                    </td>
+                                    <td className="border p-2">
+                                        <input type="number" value={tx.tip || 0} onChange={(e) => handleFieldChange(tx.id, 'tip', e.target.value)} className="border px-2 py-1 w-24 rounded" />
+                                    </td>
+                                    <td className="border p-2">Rp {tx.total.toLocaleString()}</td>
+                                    <td className="border p-2">{tx.paymentMethod || '-'}</td>
+                                    <td className="border p-2 text-center">
+                                        <button
+                                            onClick={() => handleDeleteTransaction(tx.id)}
+                                            className="text-red-600 hover:text-red-800"
+                                            title="Hapus Transaksi"
+                                        >
+                                            <TrashIcon className="w-5 h-5 inline" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             )}
         </main>
     );

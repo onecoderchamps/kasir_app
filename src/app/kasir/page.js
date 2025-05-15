@@ -12,6 +12,8 @@ export default function HomeBase() {
     const [cart, setCart] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState('');
+    const [selectedTipPayment, setSelectedTipPayment] = useState('');
+
     const [selectedBank, setSelectedBank] = useState('');
     const [cashGiven, setCashGiven] = useState('');
     const [customerName, setCustomerName] = useState('');
@@ -21,6 +23,7 @@ export default function HomeBase() {
     const [expandedCategories, setExpandedCategories] = useState({});
     const [coupon, setCoupon] = useState('');
     const [discount, setDiscount] = useState(0);
+    const [tip, setTip] = useState(0);
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [employees, setEmployees] = useState([]);
@@ -54,7 +57,7 @@ export default function HomeBase() {
 
     const fetchServices = async () => {
         const q = query(collection(db, 'Services'), where('idOutlet', '==', idOutlet));
-            const snapshot = await getDocs(q);
+        const snapshot = await getDocs(q);
         const result = snapshot.docs
             .map((doc) => ({
                 id: doc.id,
@@ -171,31 +174,53 @@ export default function HomeBase() {
         const idOutlet = localStorage.getItem('idOutlet');
         const existingTransactions = JSON.parse(localStorage.getItem('transactions')) || [];
         const transactionId = Date.now();
-        const cartWithTransactionId = cart.map(item => ({
-            ...item,
-            idTransaction: transactionId
-        }));
+        const treatmentNames = cart.map(item => item.name).join(", ");
 
+        const cartWithTransactionId = cart.flatMap(item => {
+            const servedByList = item.servedBy ? item.servedBy.split(",").map(s => s.trim()) : [];
+        
+            if (servedByList.length > 1) {
+                const splitPrice = Math.floor(item.price / servedByList.length);
+                return servedByList.map(name => ({
+                    ...item,
+                    servedBy: name,
+                    price: splitPrice,
+                    serviceId: item.id,
+                    idTransaction: transactionId
+                }));
+            }
+        
+            return [{
+                ...item,
+                serviceId: item.id,
+                idTransaction: transactionId
+            }];
+        });
         const newTransaction = {
             id: transactionId,
             date: new Date().toLocaleString(),
             customerName,
             customerPhone,
+            treatment: treatmentNames,
             cart: cartWithTransactionId,
+            tip: parseInt(tip),
             total,
             subtotal,
             coupon,
             discount,
             paymentMethod: selectedPayment,
+            paymentTipMethod: selectedPayment,
             idOutlet: idOutlet,
             bank: selectedPayment === 'Transfer' ? selectedBank : selectedPayment === 'EDC' ? selectedEDC : null,
             cashGiven: selectedPayment === 'Tunai' ? cashGiven : null,
             change: selectedPayment === 'Tunai' ? change : null,
         };
+
         existingTransactions.push(newTransaction);
         localStorage.setItem('transactions', JSON.stringify(existingTransactions));
         alert("Terimakasih, transaksi berhasil disimpan!");
     };
+
 
     const updateDatabase = async () => {
         const confirmed = window.confirm(
@@ -243,6 +268,8 @@ export default function HomeBase() {
         saveTransaction();
         setCart([]);
         setSelectedPayment('');
+        setSelectedTipPayment('');
+        setTip(0);
         setSelectedBank('');
         setCashGiven('');
         setCustomerName('');
@@ -731,7 +758,7 @@ export default function HomeBase() {
 
                         {/* Tombol Pilihan */}
                         <div className="space-y-2 mb-6">
-                            {['QRIS', 'Transfer', 'EDC', 'Tunai'].map((method) => (
+                            {['Transfer', 'EDC', 'Tunai'].map((method) => (
                                 <button
                                     key={method}
                                     onClick={() => setSelectedPayment(method)}
@@ -744,17 +771,6 @@ export default function HomeBase() {
                                 </button>
                             ))}
                         </div>
-
-                        {/* QRIS */}
-                        {selectedPayment === 'QRIS' && (
-                            <div className="flex justify-center mb-6">
-                                <img
-                                    src="https://media.perkakasku.id/image/qrperkakasku.jpeg"
-                                    alt="QRIS"
-                                    className="w-40 h-40 object-contain"
-                                />
-                            </div>
-                        )}
 
                         {/* Transfer */}
                         {selectedPayment === 'Transfer' && (
@@ -811,9 +827,37 @@ export default function HomeBase() {
                             </div>
                         )}
 
+                        {/* Input Nomor */}
+                        <div className="mb-6">
+                            <label className="block font-semibold mb-1">TIP:</label>
+                            <input
+                                type="tel"
+                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-300"
+                                placeholder="Masukkan tip"
+                                value={tip}
+                                onChange={(e) => setTip(e.target.value)}
+                            />
+                        </div>
+
+                        {parseInt(tip) > 0 &&
+                            <><h2 className="text-xl font-bold mb-4">Pilih Metode Pembayaran Tip</h2><div className="space-y-2 mb-6">
+                                {['Transfer', 'EDC', 'Tunai'].map((method) => (
+                                    <button
+                                        key={method}
+                                        onClick={() => setSelectedTipPayment(method)}
+                                        className={`w-full px-4 py-2 rounded font-semibold border ${selectedTipPayment === method
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+                                    >
+                                        {method}
+                                    </button>
+                                ))}
+                            </div></>
+                        }
+
                         <div className="border-t pt-4 mt-4">
                             <div className="text-lg font-bold text-center">
-                                Total Bayar: Rp {total.toLocaleString()}
+                                Total Bayar: Rp {(total + parseInt(tip)).toLocaleString()}
                             </div>
                         </div>
 
