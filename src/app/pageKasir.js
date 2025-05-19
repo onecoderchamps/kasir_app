@@ -71,7 +71,7 @@ export default function Login() {
   const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'DEL', '0', 'OK'];
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300 px-4">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-200 via-orange-300 to-orange-200 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
         <h1 className="text-2xl font-bold mb-6 text-blue-600">Kasir</h1>
 
@@ -88,7 +88,7 @@ export default function Login() {
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className={`w-4 h-4 rounded-full border ${i < pin.length ? 'bg-blue-600 border-blue-600' : 'border-gray-400'}`}
+              className={`w-4 h-4 rounded-full border ${i < pin.length ? 'bg-orange-600 border-orange-600' : 'border-gray-400'}`}
             />
           ))}
         </div>
