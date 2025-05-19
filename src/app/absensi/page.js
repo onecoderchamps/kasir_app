@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import {
   doc,
   getDoc,
@@ -356,9 +357,41 @@ export default function AbsensiPage() {
       <h2 className="text-2xl font-bold mb-6 text-center text-indigo-600">Absensi</h2>
 
       {!inRange && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <><div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
           Anda tidak berada di lokasi outlet aktif (jarak &gt; 100 meter)
-        </div>
+        </div><div className="mb-6 h-48 rounded overflow-hidden shadow-md">
+            <MapContainer
+              center={location
+                ? [location.latitude, location.longitude]
+                : outlets.length > 0
+                  ? [outlets[0].latitude, outlets[0].longitude]
+                  : [0, 0]}
+              zoom={17}
+              style={{ height: '100%', width: '100%' }}
+              scrollWheelZoom={false}
+              className="rounded"
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+              {outlets.map((outlet) => (
+                <React.Fragment key={outlet.id}>
+                  <Marker position={[outlet.latitude, outlet.longitude]}>
+                    <Popup>{outlet.nama}</Popup>
+                  </Marker>
+                  <Circle
+                    center={[outlet.latitude, outlet.longitude]}
+                    radius={100}
+                    pathOptions={{ color: 'green', fillColor: 'green', fillOpacity: 0.2 }} />
+                </React.Fragment>
+              ))}
+
+              {location && (
+                <Marker position={[location.latitude, location.longitude]}>
+                  <Popup>Lokasi Anda</Popup>
+                </Marker>
+              )}
+            </MapContainer>
+          </div></>
       )}
 
       {currentOutlet && (
@@ -369,20 +402,23 @@ export default function AbsensiPage() {
 
           <div className="mb-6 h-48 rounded overflow-hidden shadow-md">
             <MapContainer
-              center={[currentOutlet.latitude, currentOutlet.longitude]}
+              center={
+                location
+                  ? [location.latitude, location.longitude]
+                  : currentOutlet
+                    ? [currentOutlet.latitude, currentOutlet.longitude]
+                    : [0, 0]
+              }
               zoom={17}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={false}
               className="rounded"
             >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={[currentOutlet.latitude, currentOutlet.longitude]}>
-                <Popup>{currentOutlet.nama}</Popup>
-              </Marker>
-              {location && (
+              {currentOutlet && (
                 <>
-                  <Marker position={[location.latitude, location.longitude]}>
-                    <Popup>Lokasi Anda</Popup>
+                  <Marker position={[currentOutlet.latitude, currentOutlet.longitude]}>
+                    <Popup>{currentOutlet.nama}</Popup>
                   </Marker>
                   <Circle
                     center={[currentOutlet.latitude, currentOutlet.longitude]}
@@ -391,8 +427,14 @@ export default function AbsensiPage() {
                   />
                 </>
               )}
+              {location && (
+                <Marker position={[location.latitude, location.longitude]}>
+                  <Popup>Lokasi Anda</Popup>
+                </Marker>
+              )}
             </MapContainer>
           </div>
+
         </>
       )}
 
