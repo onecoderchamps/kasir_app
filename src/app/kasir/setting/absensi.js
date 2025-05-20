@@ -113,12 +113,16 @@ function App() {
     setModalData(null);
   };
 
+  // Build data tabel, tambah total denda per baris
   const buildTableData = () => {
     return terapis.map((t) => {
-      const row = { name: t.name };
+      let totalDenda = 0;
+      const row = { name: t.name, totalDenda: 0 };
 
       dates.forEach((date) => {
         const match = absensi.find((a) => a.idUser === t.idUser && a.tanggal === date);
+        const denda = match?.denda || 0;
+        totalDenda += denda;
 
         if (match) {
           if (match.status === 'Hadir' && match.jamMasuk) {
@@ -137,22 +141,30 @@ function App() {
                     className="w-20 h-20 object-cover rounded shadow"
                   />
                 )}
+                {denda > 0 && (
+                  <div className="text-red-600 font-semibold mt-1">Denda: Rp {denda.toLocaleString()}</div>
+                )}
               </div>
             );
           } else {
             row[date] = (
-              <select
-                className="border rounded p-1 text-sm"
-                value={match.status || ''}
-                onChange={(e) => handleStatusChange(e, t.idUser, date, match.id)}
-                disabled={match.status === 'Hadir'}
-              >
-                <option value="" disabled>Pilih</option>
-                <option value="Izin">Izin</option>
-                <option value="Sakit">Sakit</option>
-                <option value="Absen">Absen</option>
-                <option value="Cuti">Cuti</option>
-              </select>
+              <div>
+                <select
+                  className="border rounded p-1 text-sm"
+                  value={match.status || ''}
+                  onChange={(e) => handleStatusChange(e, t.idUser, date, match.id)}
+                  disabled={match.status === 'Hadir'}
+                >
+                  <option value="" disabled>Pilih</option>
+                  <option value="Izin">Izin</option>
+                  <option value="Sakit">Sakit</option>
+                  <option value="Absen">Absen</option>
+                  <option value="Cuti">Cuti</option>
+                </select>
+                {denda > 0 && (
+                  <div className="text-red-600 font-semibold mt-1">Denda: Rp {denda.toLocaleString()}</div>
+                )}
+              </div>
             );
           }
         } else {
@@ -163,7 +175,6 @@ function App() {
               onChange={(e) => handleStatusChange(e, t.idUser, date)}
             >
               <option value="" disabled>Pilih</option>
-              <option value="Hadir">Hadir</option>
               <option value="Izin">Izin</option>
               <option value="Sakit">Sakit</option>
               <option value="Absen">Absen</option>
@@ -172,6 +183,8 @@ function App() {
           );
         }
       });
+
+      row.totalDenda = totalDenda;
 
       return row;
     });
@@ -217,10 +230,9 @@ function App() {
               <tr>
                 <th className="border px-4 py-2 bg-gray-200">Nama</th>
                 {dates.map((date) => (
-                  <th key={date} className="border px-4 py-2 bg-gray-100">
-                    {formatDate(date)}
-                  </th>
+                  <th key={date} className="border px-4 py-2 bg-gray-100">{formatDate(date)}</th>
                 ))}
+                <th className="border px-4 py-2 bg-gray-200">Total Denda</th>
               </tr>
             </thead>
             <tbody>
@@ -232,9 +244,22 @@ function App() {
                       {row[date]}
                     </td>
                   ))}
+                  <td className="border px-4 py-2 text-right font-semibold text-red-600">
+                    Rp {row.totalDenda.toLocaleString()}
+                  </td>
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td className="border px-4 py-2 font-bold text-right" colSpan={dates.length + 1}>
+                  Total Denda Keseluruhan:
+                </td>
+                <td className="border px-4 py-2 font-bold text-right text-red-600">
+                  Rp {tableData.reduce((sum, row) => sum + row.totalDenda, 0).toLocaleString()}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -275,6 +300,9 @@ function App() {
                 alt="Foto Masuk"
                 className="mt-4 w-full object-cover rounded"
               />
+            )}
+            {modalData.denda > 0 && (
+              <p className="mt-2 font-semibold text-red-600">Denda: Rp {modalData.denda.toLocaleString()}</p>
             )}
           </div>
         </div>
