@@ -4,7 +4,7 @@ import { saveAs } from 'file-saver';
 import { collection, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../api/firebase';
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { TrashIcon, PlusIcon } from '@heroicons/react/24/solid';
+import { TrashIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/solid';
 
 const outlet = localStorage.getItem('idOutlet');
 
@@ -96,7 +96,6 @@ export default function History() {
         setLoading(false);
     };
 
-    // Handler perubahan field dan cart
     const handleFieldChange = (txId, field, value) => {
         const updated = transactions.map(tx => {
             if (tx.id === txId) {
@@ -183,15 +182,106 @@ export default function History() {
         localStorage.setItem('transactions', JSON.stringify(updated));
     };
 
+    const handleDeleteTransaction = (txId) => {
+        if (!window.confirm('Yakin ingin menghapus transaksi ini?')) return;
+        const updated = transactions.filter(tx => tx.id !== txId);
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handlePaymentChange = (txId, value) => {
+        const updated = transactions.map(tx =>
+            tx.id === txId ? { ...tx, paymentMethod: value } : tx
+        );
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const paymentOptions = [
+        'CASH / TUNAI',
+        'EDC BCA - QRIS',
+        'EDC BCA - CARD',
+        'EDC MANDIRI - QRIS',
+        'EDC MANDIRI - CARD',
+        'EDC BRI - QRIS',
+        'EDC BRI - CARD',
+        'TRANSFER - REKENING BCA',
+        'TRANSFER - REKENING MANDIRI',
+        'TRANSFER - REKENING BRI',
+        'BY VOUCHER',
+        'SPONSOR'
+    ];
+
+    const handlePrintStruk = (tx) => {
+        const printWindow = window.open('', '', 'width=400,height=600');
+        if (!printWindow) return;
+    
+        const style = `
+            <style>
+                body { font-family: monospace; padding: 20px; font-size: 14px; }
+                .center { text-align: center; }
+                .bold { font-weight: bold; }
+                .line { border-top: 1px dashed #000; margin: 10px 0; }
+                .treatment { margin-left: 10px; }
+            </style>
+        `;
+    
+        let html = `<html><head><title>Struk Transaksi</title>${style}</head><body>`;
+        html += `
+            <div class="center bold">DSTYLE SALON</div>
+            <div class="center">${formatDate(tx.date)}</div>
+            <div class="line"></div>
+            <div>Nama: ${tx.customerName || '-'}</div>
+            <div>No HP: ${tx.customerPhone || '-'}</div>
+            <div class="line"></div>
+            <div class="bold">TREATMENT</div>
+        `;
+    
+        // Dapatkan list nama treatment unik
+        const uniqueTreatments = [...new Set(tx.cart.map(item => item.name))];
+        uniqueTreatments.forEach(name => {
+            html += `<div class="treatment">- ${name}</div>`;
+        });
+    
+        html += `
+            <div class="line"></div>
+            <div>Total: <span class="bold">Rp ${tx.total.toLocaleString()}</span></div>
+            <div>Metode: ${tx.paymentMethod || '-'}</div>
+            <div class="line"></div>
+            <div class="center">Terima Kasih!</div>
+        `;
+    
+        html += `</body></html>`;
+    
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    };
+    
+    
+
     const formatDate = (date) => {
         const d = new Date(date);
         return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
     };
 
-    const handleDeleteTransaction = (txId) => {
-        if (!window.confirm('Yakin ingin menghapus transaksi ini?')) return;
+    const handleAddTransaction = () => {
+        const now = new Date();
+        const newTransaction = {
+            id: Date.now().toString(), // gunakan timestamp unik sebagai ID
+            date: now.toISOString(),
+            customerName: '',
+            customerPhone: '',
+            paymentMethod: '',
+            cart: [],
+            subtotal: 0,
+            tip: 0,
+            total: 0,
+            idOutlet: outlet,
+        };
 
-        const updated = transactions.filter(tx => tx.id !== txId);
+        const updated = [newTransaction, ...transactions];
         setTransactions(updated);
         localStorage.setItem('transactions', JSON.stringify(updated));
     };
@@ -205,9 +295,14 @@ export default function History() {
                     </button>
                     <h1 className="text-2xl font-bold">Transaksi</h1>
                 </div>
-                <button onClick={saveTransaksi} disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded">
-                    {loading ? 'Menyimpan...' : 'Update ke Server'}
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={handleAddTransaction} className="bg-green-600 text-white px-4 py-2 rounded">
+                        + Tambah Transaksi
+                    </button>
+                    <button onClick={saveTransaksi} disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded">
+                        {loading ? 'Menyimpan...' : 'Update ke Server'}
+                    </button>
+                </div>
             </div>
 
             {transactions.length === 0 ? (
@@ -224,6 +319,7 @@ export default function History() {
                                 <th className="border p-2">Tip</th>
                                 <th className="border p-2">Total</th>
                                 <th className="border p-2">Metode</th>
+                                <th className="border p-2">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -270,16 +366,34 @@ export default function History() {
                                         <input type="number" value={tx.tip || 0} onChange={(e) => handleFieldChange(tx.id, 'tip', e.target.value)} className="border px-2 py-1 w-24 rounded" />
                                     </td>
                                     <td className="border p-2">Rp {tx.total.toLocaleString()}</td>
-                                    <td className="border p-2">{tx.paymentMethod || '-'}</td>
+                                    <td className="border p-2">
+                                        <select
+                                            value={tx.paymentMethod || ''}
+                                            onChange={(e) => handlePaymentChange(tx.id, e.target.value)}
+                                            className="border p-1 rounded w-full text-sm"
+                                        >
+                                            <option value="">Pilih Metode</option>
+                                            {paymentOptions.map((opt, idx) => (
+                                                <option key={idx} value={opt}>{opt}</option>
+                                            ))}
+                                        </select>
+                                    </td>
                                     <td className="border p-2 text-center">
+                                        <button
+                                            onClick={() => handlePrintStruk(tx)}
+                                            className="text-blue-600 hover:text-blue-800"
+                                        >
+                                            <PrinterIcon className="w-8 h-8 inline" />
+                                        </button>
                                         <button
                                             onClick={() => handleDeleteTransaction(tx.id)}
                                             className="text-red-600 hover:text-red-800"
                                             title="Hapus Transaksi"
                                         >
-                                            <TrashIcon className="w-5 h-5 inline" />
+                                            <TrashIcon className="w-8 h-8 inline" />
                                         </button>
                                     </td>
+
                                 </tr>
                             ))}
                         </tbody>

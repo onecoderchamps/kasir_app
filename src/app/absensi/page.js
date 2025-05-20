@@ -168,7 +168,7 @@ export default function AbsensiPage() {
         parseFloat(outlet.latitude),
         parseFloat(outlet.longitude)
       );
-      return distance <= 100;
+      return distance <= 200;
     });
 
     setCurrentOutlet(nearest || null);
@@ -366,7 +366,7 @@ export default function AbsensiPage() {
                 : outlets.length > 0
                   ? [outlets[0].latitude, outlets[0].longitude]
                   : [0, 0]}
-              zoom={17}
+              zoom={16}
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom={false}
               className="rounded"
@@ -380,7 +380,7 @@ export default function AbsensiPage() {
                   </Marker>
                   <Circle
                     center={[outlet.latitude, outlet.longitude]}
-                    radius={100}
+                    radius={200}
                     pathOptions={{ color: 'green', fillColor: 'green', fillOpacity: 0.2 }} />
                 </React.Fragment>
               ))}

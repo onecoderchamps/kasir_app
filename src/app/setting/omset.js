@@ -12,6 +12,16 @@ export default function OmzetReport() {
   const [selectedOutlet, setSelectedOutlet] = useState('all');
   const [outlet, setOutlet] = useState([]);
 
+  // Modal state
+  const [modalAllUserOpen, setModalAllUserOpen] = useState(false);
+  const [modalAllUserData, setModalAllUserData] = useState({
+    name: '',
+    transactions: [],
+  });
+
+  // Simpan transaksi fetch untuk modal detail
+  const [allTransactions, setAllTransactions] = useState([]);
+
   // Ambil outlet
   useEffect(() => {
     const fetchOutlet = async () => {
@@ -175,6 +185,9 @@ export default function OmzetReport() {
       };
     });
 
+    // Simpan transaksi full untuk modal nanti
+    setAllTransactions(transactions);
+
     const filteredTransactions =
       selectedCategory === 'all'
         ? transactions
@@ -190,6 +203,22 @@ export default function OmzetReport() {
     const { rows, sortedNames } = buildPivot(servedRevenue, startDate, endDate);
     setPivotData(rows);
     setNames(sortedNames);
+  };
+
+  // Fungsi buka modal semua transaksi user saat klik header nama
+  const openModalUserTransactions = (userName) => {
+    // Filter transaksi yang ada item servedBy user ini
+    const userTransactions = allTransactions.filter((trx) =>
+      trx.cart.some((item) =>
+        item.servedBy.split(',').map((n) => n.trim()).includes(userName)
+      )
+    );
+
+    setModalAllUserData({
+      name: userName,
+      transactions: userTransactions,
+    });
+    setModalAllUserOpen(true);
   };
 
   return (
@@ -257,7 +286,14 @@ export default function OmzetReport() {
             <tr className="text-center">
               <th className="p-2 border">Tanggal</th>
               {names.map((name) => (
-                <th key={name} className="p-2 border">{name}</th>
+                <th
+                  key={name}
+                  className="p-2 border cursor-pointer hover:bg-gray-200"
+                  onClick={() => openModalUserTransactions(name)}
+                  title={`Lihat transaksi ${name}`}
+                >
+                  {name}
+                </th>
               ))}
               <th className="p-2 border">Total</th>
             </tr>
@@ -279,6 +315,88 @@ export default function OmzetReport() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal semua transaksi user */}
+      {modalAllUserOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+          onClick={() => setModalAllUserOpen(false)}
+        >
+          <div
+            className="bg-white p-6 rounded shadow-lg max-w-3xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold mb-4">
+              Semua Transaksi untuk {modalAllUserData.name}
+            </h2>
+            {modalAllUserData.transactions.length === 0 ? (
+              <p>Tidak ada transaksi.</p>
+            ) : (
+              <>
+                {modalAllUserData.transactions.map((trx, idx) => (
+                  <div key={idx} className="mb-4 p-3 border rounded bg-gray-50">
+                    <div>
+                      <strong>No Transaksi:</strong> {trx.invoiceNumber || '-'}
+                    </div>
+                    <div>
+                      <strong>Tanggal:</strong>{' '}
+                      {new Date(trx.date).toLocaleDateString('id-ID')}
+                    </div>
+                    <div>
+                      <strong>Jam:</strong>{' '}
+                      {new Date(trx.date).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                    <div>
+                      <strong>Item:</strong>
+                    </div>
+                    <ul className="list-disc ml-5">
+                      {trx.cart
+                        .filter((item) =>
+                          item.servedBy
+                            .split(',')
+                            .map((n) => n.trim())
+                            .includes(modalAllUserData.name)
+                        )
+                        .map((item, i) => (
+                          <li key={i}>
+                            {item.name} (Rp {item.price.toLocaleString()})
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                ))}
+
+                {/* Total transaksi */}
+                <div className="mt-4 font-bold text-lg border-t pt-3">
+                  Total Transaksi: Rp{' '}
+                  {modalAllUserData.transactions
+                    .reduce((acc, trx) => {
+                      // Hitung hanya item yg servedBy sesuai nama user modal
+                      const sumTrx = trx.cart.reduce((subAcc, item) => {
+                        const servers = item.servedBy.split(',').map((n) => n.trim());
+                        if (servers.includes(modalAllUserData.name)) {
+                          return subAcc + item.price / servers.length;
+                        }
+                        return subAcc;
+                      }, 0);
+                      return acc + sumTrx;
+                    }, 0)
+                    .toLocaleString()}
+                </div>
+              </>
+            )}
+            <button
+              className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              onClick={() => setModalAllUserOpen(false)}
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

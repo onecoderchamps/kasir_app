@@ -10,17 +10,19 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../api/firebase";
 import App from "./absensi";
+import Dashboard from "./dashboard";
 
 const menuItems = [
+    "Dashboard",
     "Laporan Omset",
     "Laporan Absensi",
     "Outlet",
-    "Terapis", 
+    "Terapis",
     "Kasir"
 ];
 
 export default function HomePage() {
-    const [active, setActive] = useState("Laporan");
+    const [active, setActive] = useState("Dashboard");
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -82,6 +84,8 @@ export default function HomePage() {
         switch (active) {
             case "Laporan Absensi":
                 return <App />;
+            case "Dashboard":
+                return <Dashboard />;
             case "Terapis":
                 return <TerapisTable />;
             case "Outlet":

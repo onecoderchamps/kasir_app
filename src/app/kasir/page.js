@@ -178,7 +178,7 @@ export default function HomeBase() {
 
         const cartWithTransactionId = cart.flatMap(item => {
             const servedByList = item.servedBy ? item.servedBy.split(",").map(s => s.trim()) : [];
-        
+
             if (servedByList.length > 1) {
                 const splitPrice = Math.floor(item.price / servedByList.length);
                 return servedByList.map(name => ({
@@ -189,7 +189,7 @@ export default function HomeBase() {
                     idTransaction: transactionId
                 }));
             }
-        
+
             return [{
                 ...item,
                 serviceId: item.id,
@@ -366,6 +366,21 @@ export default function HomeBase() {
         const saved = localStorage.getItem('services');
         if (saved) setProducts(JSON.parse(saved));
     }, []);
+
+    const paymentOptions = [
+        'CASH / TUNAI',
+        'EDC BCA - QRIS',
+        'EDC BCA - CARD',
+        'EDC MANDIRI - QRIS',
+        'EDC MANDIRI - CARD',
+        'EDC BRI - QRIS',
+        'EDC BRI - CARD',
+        'TRANSFER - REKENING BCA',
+        'TRANSFER - REKENING MANDIRI',
+        'TRANSFER - REKENING BRI',
+        'BY VOUCHER',
+        'SPONSOR'
+    ];
 
     return (
         <main className="p-6">
@@ -758,74 +773,17 @@ export default function HomeBase() {
 
                         {/* Tombol Pilihan */}
                         <div className="space-y-2 mb-6">
-                            {['Transfer', 'EDC', 'Tunai'].map((method) => (
-                                <button
-                                    key={method}
-                                    onClick={() => setSelectedPayment(method)}
-                                    className={`w-full px-4 py-2 rounded font-semibold border ${selectedPayment === method
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    {method}
-                                </button>
-                            ))}
+                            <select
+                                value={selectedPayment || ''}
+                                onChange={(e) => setSelectedPayment(e.target.value)}
+                                className="border p-1 rounded w-full text-sm"
+                            >
+                                <option value="">Pilih Metode</option>
+                                {paymentOptions.map((opt, idx) => (
+                                    <option key={idx} value={opt}>{opt}</option>
+                                ))}
+                            </select>
                         </div>
-
-                        {/* Transfer */}
-                        {selectedPayment === 'Transfer' && (
-                            <div className="space-y-2 mb-6">
-                                <label className="font-semibold">Pilih Bank:</label>
-                                {banks.map((bank, i) => (
-                                    <div
-                                        key={i}
-                                        className={`p-4 border rounded-lg cursor-pointer ${selectedBank?.name === bank.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                                            }`}
-                                        onClick={() => setSelectedBank(bank)}
-                                    >
-                                        <div className="font-bold">{bank.name}</div>
-                                        <div className="text-sm">Atas Nama: {bank.accountName}</div>
-                                        <div className="text-sm">No Rek: {bank.accountNumber}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* EDC */}
-                        {selectedPayment === 'EDC' && (
-                            <div className="space-y-2 mb-6">
-                                <label className="font-semibold">Pilih EDC:</label>
-                                {edcMachines.map((edc, i) => (
-                                    <div
-                                        key={i}
-                                        className={`p-4 border rounded-lg cursor-pointer ${selectedEDC?.name === edc.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                                            }`}
-                                        onClick={() => setSelectedEDC(edc)}
-                                    >
-                                        <div className="font-bold">{edc.name}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Tunai */}
-                        {selectedPayment === 'Tunai' && (
-                            <div className="mb-6">
-                                <label className="font-semibold mb-1 block">Masukkan Uang Diterima:</label>
-                                <input
-                                    type="number"
-                                    className="w-full border rounded px-3 py-2"
-                                    placeholder="Masukkan nominal uang"
-                                    value={cashGiven}
-                                    onChange={(e) => setCashGiven(e.target.value)}
-                                />
-                                {cashGiven && (
-                                    <div className="mt-2 text-green-600">
-                                        Kembalian: Rp {change > 0 ? change.toLocaleString() : 0}
-                                    </div>
-                                )}
-                            </div>
-                        )}
 
                         {/* Input Nomor */}
                         <div className="mb-6">
@@ -841,17 +799,16 @@ export default function HomeBase() {
 
                         {parseInt(tip) > 0 &&
                             <><h2 className="text-xl font-bold mb-4">Pilih Metode Pembayaran Tip</h2><div className="space-y-2 mb-6">
-                                {['Transfer', 'EDC', 'Tunai'].map((method) => (
-                                    <button
-                                        key={method}
-                                        onClick={() => setSelectedTipPayment(method)}
-                                        className={`w-full px-4 py-2 rounded font-semibold border ${selectedTipPayment === method
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}`}
-                                    >
-                                        {method}
-                                    </button>
-                                ))}
+                                <select
+                                    value={selectedTipPayment || ''}
+                                    onChange={(e) => setSelectedTipPayment(e.target.value)}
+                                    className="border p-1 rounded w-full text-sm"
+                                >
+                                    <option value="">Pilih Metode</option>
+                                    {paymentOptions.map((opt, idx) => (
+                                        <option key={idx} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
                             </div></>
                         }
 

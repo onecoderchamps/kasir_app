@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, where, addDoc, updateDoc, doc } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+  updateDoc,
+  doc
+} from 'firebase/firestore';
 import { db } from '../../../api/firebase';
 
 const idOutlet = localStorage.getItem('idOutlet');
@@ -25,7 +33,6 @@ function App() {
   const [terapis, setTerapis] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Refactored fetchData agar bisa dipanggil ulang
   const fetchData = async () => {
     if (!startDate || !endDate || !idOutlet) return;
 
@@ -84,7 +91,7 @@ function App() {
         });
         console.log('Absensi berhasil ditambahkan!');
       }
-      fetchData(); // Refresh data setelah update/tambah
+      fetchData(); // Refresh data
     } catch (error) {
       console.error('Error updating/adding absensi:', error);
     }
@@ -93,6 +100,7 @@ function App() {
   const buildTableData = () => {
     return terapis.map((t) => {
       const row = { name: t.name };
+
       dates.forEach((date) => {
         const match = absensi.find((a) => a.idUser === t.idUser && a.tanggal === date);
 
@@ -103,7 +111,18 @@ function App() {
               minute: '2-digit',
             });
 
-            row[date] = <div className="text-green-600 font-medium">{jamMasuk}</div>;
+            row[date] = (
+              <div className="flex flex-col items-center">
+                <div className="text-green-600 font-medium mb-1">Masuk ={'>'} {jamMasuk}</div>
+                {match.fotoMasuk && (
+                  <img
+                    src={match.fotoMasuk}
+                    alt="Foto Masuk"
+                    className="w-20 h-20 object-cover rounded"
+                  />
+                )}
+              </div>
+            );
           } else {
             row[date] = (
               <select
@@ -138,6 +157,7 @@ function App() {
           );
         }
       });
+
       return row;
     });
   };

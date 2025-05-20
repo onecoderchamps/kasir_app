@@ -27,7 +27,9 @@ function App() {
 
   // Refactored fetchData agar bisa dipanggil ulang
   const fetchData = async () => {
-    if (!startDate || !endDate) return;
+    console.log('Terapis:', terapis); 
+      console.log('Absensi:', absensi);
+    if (!startDate || !endDate) return; 
 
     setLoading(true);
     try {
@@ -52,9 +54,9 @@ function App() {
         ...doc.data(),
         idUser: doc.id,
       }));
-
       setAbsensi(absensiData);
       setTerapis(terapisData);
+      
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -64,6 +66,7 @@ function App() {
 
   useEffect(() => {
     fetchData();
+    
   }, [startDate, endDate]);
 
   const dates = getDateRange(startDate, endDate);
