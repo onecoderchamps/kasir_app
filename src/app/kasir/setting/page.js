@@ -19,7 +19,7 @@ const menuItems = [
 ];
 
 export default function HomePage() {
-    const [active, setActive] = useState("Laporan");
+    const [active, setActive] = useState("Laporan Absensi");
 
     useEffect(() => {
         const fetchUser = async () => {

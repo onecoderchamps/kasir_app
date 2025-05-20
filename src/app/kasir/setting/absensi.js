@@ -33,6 +33,10 @@ function App() {
   const [terapis, setTerapis] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // State modal review
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState(null);
+
   const fetchData = async () => {
     if (!startDate || !endDate || !idOutlet) return;
 
@@ -97,6 +101,18 @@ function App() {
     }
   };
 
+  // Fungsi untuk buka modal dengan data absensi
+  const openModal = (absensiData) => {
+    setModalData(absensiData);
+    setModalOpen(true);
+  };
+
+  // Fungsi untuk tutup modal
+  const closeModal = () => {
+    setModalOpen(false);
+    setModalData(null);
+  };
+
   const buildTableData = () => {
     return terapis.map((t) => {
       const row = { name: t.name };
@@ -112,13 +128,13 @@ function App() {
             });
 
             row[date] = (
-              <div className="flex flex-col items-center">
-                <div className="text-green-600 font-medium mb-1">Masuk ={'>'} {jamMasuk}</div>
+              <div className="flex flex-col items-center cursor-pointer" onClick={() => openModal({ ...match, name: t.name })} title="Klik untuk lihat detail">
+                <div className="text-green-600 font-medium mb-1">Masuk =&gt; {jamMasuk}</div>
                 {match.fotoMasuk && (
                   <img
                     src={match.fotoMasuk}
                     alt="Foto Masuk"
-                    className="w-20 h-20 object-cover rounded"
+                    className="w-20 h-20 object-cover rounded shadow"
                   />
                 )}
               </div>
@@ -132,7 +148,6 @@ function App() {
                 disabled={match.status === 'Hadir'}
               >
                 <option value="" disabled>Pilih</option>
-                <option value="Hadir">Hadir</option>
                 <option value="Izin">Izin</option>
                 <option value="Sakit">Sakit</option>
                 <option value="Absen">Absen</option>
@@ -169,7 +184,7 @@ function App() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen relative">
       <h1 className="text-2xl font-bold mb-4">Rekap Absensi Terapis</h1>
 
       <div className="flex gap-4 mb-6">
@@ -221,6 +236,47 @@ function App() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal */}
+      {modalOpen && modalData && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-2 right-2 text-gray-600 hover:text-gray-900 font-bold text-xl"
+              onClick={closeModal}
+              aria-label="Close modal"
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-4">Detail Absensi</h2>
+            <p><strong>Nama Terapis:</strong> {modalData.name}</p>
+            <p><strong>Tanggal:</strong> {modalData.tanggal}</p>
+            <p><strong>Status:</strong> {modalData.status}</p>
+            {modalData.jamMasuk && (
+              <p>
+                <strong>Jam Masuk:</strong>{' '}
+                {new Date(modalData.jamMasuk.seconds * 1000).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            )}
+            {modalData.fotoMasuk && (
+              <img
+                src={modalData.fotoMasuk}
+                alt="Foto Masuk"
+                className="mt-4 w-full object-cover rounded"
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
