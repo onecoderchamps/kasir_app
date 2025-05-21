@@ -186,7 +186,9 @@ export default function History() {
         'TRANSFER - REKENING MANDIRI',
         'TRANSFER - REKENING BRI',
         'BY VOUCHER',
-        'SPONSOR'
+        'SPONSOR',
+        'TIP Transfer',
+        'TIP Cash',
     ];
 
     const handleAddPayment = (txId) => {
@@ -334,10 +336,9 @@ export default function History() {
                                 <th className="border p-2">Tanggal</th>
                                 <th className="border p-2">Customer</th>
                                 <th className="border p-2">No Hp</th>
-                                <th className="border p-2">Treatment & Staff</th>
+                                <th className="border p-2">Treatment</th>
                                 <th className="border p-2">Total</th>
                                 <th className="border p-2">Pembayaran</th>
-                                <th className="border p-2">Tip</th>
                                 <th className="border p-2">Aksi</th>
                             </tr>
                         </thead>
@@ -404,9 +405,6 @@ export default function History() {
                                                 </button>
                                             </li>
                                         </ul>
-                                    </td>
-                                    <td className="border p-2">
-                                        <input type="number" value={tx.tip || 0} onChange={(e) => handleFieldChange(tx.id, 'tip', e.target.value)} className="border px-2 py-1 w-24 rounded" />
                                     </td>
                                     <td className="border p-2 text-center">
                                         <button onClick={() => handlePrintStruk(tx)} className="text-blue-600 hover:text-blue-800">
