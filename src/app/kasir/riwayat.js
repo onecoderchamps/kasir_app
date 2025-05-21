@@ -11,6 +11,8 @@ export default function History() {
     const [loading, setLoading] = useState(false);
     const [staffList, setStaffList] = useState([]);
     const [servicesList, setServicesList] = useState([]);
+    const [inventory, setInventory] = useState([]);
+
 
     useEffect(() => {
         const uid = localStorage.getItem('uid');
@@ -37,6 +39,9 @@ export default function History() {
 
             const services = JSON.parse(localStorage.getItem('services')) || [];
             setServicesList(services);
+
+            const inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+            setInventory(inventory);
         } catch (err) {
             console.error("Gagal memuat data dari localStorage:", err);
         }
@@ -233,6 +238,7 @@ export default function History() {
             customerName: '',
             customerPhone: '',
             cart: [],
+            retail: [],
             subtotal: 0,
             tip: 0,
             total: 0,
@@ -250,6 +256,68 @@ export default function History() {
             if (tx.id === txId) {
                 const payments = (tx.payments || []).filter((_, i) => i !== idx);
                 return { ...tx, payments };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleAddRetailItem = (txId) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const newItem = {
+                    barangId: '',
+                    servedBy: '',
+                    harga: 0,
+                    komisi: 0,
+                };
+                const retail = tx.retail ? [...tx.retail, newItem] : [newItem];
+                return { ...tx, retail };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleChangeRetail = (txId, idx, field, value) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const retail = (tx.retail || []).map((item, i) => {
+                    if (i === idx) {
+                        // Kalau field yang diubah barangId, cari nama barang dari inventory
+                        if (field === 'barangId') {
+                            const barang = inventory.find(b => b.id === value);
+                            return {
+                                ...item,
+                                barangId: value,
+                                nama: barang ? barang.nama : '',
+                                harga: barang ? barang.harga : 0,
+                            };
+                        }
+                        return {
+                            ...item,
+                            [field]: (field === 'harga' || field === 'komisi') ? parseInt(value) || 0 : value
+                        };
+                    }
+                    return item;
+                });
+                return { ...tx, retail };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+
+
+    const handleDeleteRetailItem = (txId, idx) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const retail = (tx.retail || []).filter((_, i) => i !== idx);
+                return { ...tx, retail };
             }
             return tx;
         });
@@ -283,12 +351,27 @@ export default function History() {
             <div class="bold">TREATMENT</div>
         `;
 
-        const uniqueTreatments = [...new Set(tx.cart.map(item => item.name))];
+        const uniqueTreatments = [...new Set(tx.cart.map(item => item))];
         uniqueTreatments.forEach(name => {
-            html += `<div class="treatment">- ${name}</div>`;
+            html += `<div class="treatment">- ${name.name} : ${name.price.toLocaleString('id')}</div>`;
         });
 
-        html += `<div class="line"></div><div>Total: <span class="bold">Rp ${tx.total.toLocaleString()}</span></div>`;
+        if (tx.retail.length > 0) {
+            html += `
+            <div class="line"></div>
+            <div class="bold">Pembelian Barang</div>
+            `;
+            const retailser = [...new Set(tx.retail.map(item => item))];
+            retailser.forEach(name => {
+                html += `<div class="treatment">- ${name.nama} : ${name.harga.toLocaleString('id')} </div>`;
+            });
+        }
+
+        const totalPembayaran = tx.cart?.reduce((sum, p) => sum + p.price, 0) || 0;
+        const totalRetail = tx.retail?.reduce((sum, r) => sum + r.harga, 0) || 0;
+        const totalAkhir = totalPembayaran + totalRetail;
+
+        html += `<div class="line"></div><div>Total: <span class="bold">Rp ${totalAkhir.toLocaleString('id')}</span></div>`;
 
         if (tx.payments && tx.payments.length > 0) {
             tx.payments.forEach(p => {
@@ -337,6 +420,7 @@ export default function History() {
                                 <th className="border p-2">Customer</th>
                                 <th className="border p-2">No Hp</th>
                                 <th className="border p-2">Treatment</th>
+                                <th className="border p-2">Retail</th>
                                 <th className="border p-2">Total</th>
                                 <th className="border p-2">Pembayaran</th>
                                 <th className="border p-2">Aksi</th>
@@ -382,7 +466,84 @@ export default function History() {
                                             </li>
                                         </ul>
                                     </td>
-                                    <td className="border p-2">Rp {tx.total.toLocaleString()}</td>
+                                    
+                                    <td className="border p-2">
+                                        <ul className="space-y-1">
+                                            {(tx.retail || []).map((item, idx) => (
+                                                <li key={idx} className="flex items-center gap-1">
+                                                    <row>
+                                                        <label className="text-sm">Barang:</label>
+                                                        <select
+                                                            value={item.barangId}
+                                                            onChange={(e) => handleChangeRetail(tx.id, idx, 'barangId', e.target.value)}
+                                                            className="border p-1 rounded w-40 text-sm"
+                                                        >
+                                                            <option value="">Pilih Barang</option>
+                                                            {inventory.map(barang => (
+                                                                <option key={barang.id} value={barang.id}>{barang.nama}</option>
+                                                            ))}
+                                                        </select>
+                                                    </row>
+
+                                                    <row>
+                                                        <label className="text-sm">Penjual:</label>
+                                                        <select
+                                                            value={item.servedBy}
+                                                            onChange={(e) => handleChangeRetail(tx.id, idx, 'servedBy', e.target.value)}
+                                                            className="border p-1 rounded w-36 text-sm"
+                                                        >
+                                                            <option value="">Pilih Staff</option>
+                                                            {staffList.map(staff => (
+                                                                <option key={staff.id} value={staff.name}>{staff.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </row>
+
+                                                    <row>
+                                                        <label className="text-sm">Harga Jual:</label>
+                                                        <input
+                                                            type="number"
+                                                            value={item.harga}
+                                                            onChange={(e) => handleChangeRetail(tx.id, idx, 'harga', e.target.value)}
+                                                            placeholder="Harga"
+                                                            className="border p-1 w-24 text-sm rounded"
+                                                        />
+                                                    </row>
+
+                                                    <row>
+                                                        <label className="text-sm">Komisi Penjual:</label>
+                                                        <input
+                                                            type="number"
+                                                            value={item.komisi}
+                                                            onChange={(e) => handleChangeRetail(tx.id, idx, 'komisi', e.target.value)}
+                                                            placeholder="Komisi"
+                                                            className="border p-1 w-24 text-sm rounded"
+                                                        />
+                                                    </row>
+
+                                                    <button onClick={() => handleDeleteRetailItem(tx.id, idx)} className="text-red-500 hover:text-red-700">
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </li>
+                                            ))}
+                                            <li>
+                                                <button
+                                                    onClick={() => handleAddRetailItem(tx.id)}
+                                                    className="flex items-center text-green-600 hover:text-green-800 text-sm"
+                                                >
+                                                    <PlusIcon className="w-4 h-4 mr-1" /> Tambah Retail
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </td>
+                                    <td className="border p-2">
+                                        {(() => {
+                                            const totalPembayaran = tx.cart?.reduce((sum, p) => sum + p.price, 0) || 0;
+                                            const totalRetail = tx.retail?.reduce((sum, r) => sum + r.harga, 0) || 0;
+                                            const totalAkhir = totalPembayaran + totalRetail;
+                                            return `Rp ${totalAkhir.toLocaleString()}`;
+                                        })()}
+                                    </td>
                                     <td className="border p-2">
                                         <ul className="space-y-1">
                                             {(tx.payments || []).map((p, i) => (

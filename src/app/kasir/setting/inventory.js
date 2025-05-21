@@ -22,11 +22,13 @@ export default function InventoryTable() {
   const [form, setForm] = useState({
     nama: '',
     qty: 0,
-    satuan: 'kg', // default satuan
+    jumlahItem: 0,
+    harga: 0,
+    satuan: 'kg',
     createdAt: new Date(),
   });
 
-  const satuanOptions = ['kg', 'gram', 'liter', 'buah', 'pcs', 'pack', 'box']; // Pilihan satuan
+  const satuanOptions = ['kg', 'gram', 'liter', 'buah', 'pcs', 'pack', 'box'];
 
   useEffect(() => {
     fetchData();
@@ -40,19 +42,33 @@ export default function InventoryTable() {
         id: doc.id,
         ...doc.data(),
       }))
-      .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt?.toDate?.() || a.createdAt) -
+          new Date(b.createdAt?.toDate?.() || b.createdAt)
+      );
     setInventory(result);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const { nama, qty, jumlahItem, harga, satuan } = form;
+
     if (editId) {
-      const { name, qty, satuan } = form; // exclude createdAt
-      await updateDoc(doc(db, 'Inventory', editId), { name, qty, satuan });
+      await updateDoc(doc(db, 'Inventory', editId), {
+        nama,
+        qty: Number(qty),
+        jumlahItem: Number(jumlahItem),
+        harga: Number(harga),
+        satuan,
+      });
     } else {
       await addDoc(collection(db, 'Inventory'), {
         ...form,
+        qty: Number(qty),
+        jumlahItem: Number(jumlahItem),
+        harga: Number(harga),
         idOutlet,
         createdAt: new Date(),
       });
@@ -61,7 +77,9 @@ export default function InventoryTable() {
     setForm({
       nama: '',
       qty: 0,
-      satuan: 'kg', // reset default satuan to kg
+      jumlahItem: 0,
+      harga: 0,
+      satuan: 'kg',
       createdAt: new Date(),
     });
     setEditId(null);
@@ -78,7 +96,13 @@ export default function InventoryTable() {
   };
 
   const handleEdit = (item) => {
-    setForm(item);
+    setForm({
+      ...item,
+      qty: item.qty || 0,
+      jumlahItem: item.jumlahItem || 0,
+      harga: item.harga || 0,
+      createdAt: item.createdAt || new Date(),
+    });
     setEditId(item.id);
     setIsModalOpen(true);
   };
@@ -87,7 +111,9 @@ export default function InventoryTable() {
     setForm({
       nama: '',
       qty: 0,
-      satuan: 'kg', // default satuan
+      jumlahItem: 0,
+      harga: 0,
+      satuan: 'kg',
       createdAt: new Date(),
     });
     setEditId(null);
@@ -112,14 +138,15 @@ export default function InventoryTable() {
             <tr className="bg-gray-100">
               <th className="p-2 border">Nama Bahan</th>
               <th className="p-2 border">Jumlah Pemakaian</th>
-              {/* <th className="p-2 border">Satuan</th> */}
+              <th className="p-2 border">Jumlah Item</th>
+              <th className="p-2 border">Harga</th>
               <th className="p-2 border">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {inventory.length === 0 ? (
               <tr>
-                <td colSpan="4" className="p-4 text-center text-gray-500">
+                <td colSpan="5" className="p-4 text-center text-gray-500">
                   Belum ada bahan. Silakan tambahkan data.
                 </td>
               </tr>
@@ -128,7 +155,8 @@ export default function InventoryTable() {
                 <tr key={item.id} className="text-center">
                   <td className="border p-2">{item.nama}</td>
                   <td className="border p-2">{item.qty}</td>
-                  {/* <td className="border p-2">{item.satuan}</td> */}
+                  <td className="border p-2">{item.jumlahItem ?? '-'}</td>
+                  <td className="border p-2">Rp {item.harga?.toLocaleString('id') || '-'}</td>
                   <td className="border p-2 space-x-2">
                     <button
                       onClick={() => handleEdit(item)}
@@ -165,16 +193,43 @@ export default function InventoryTable() {
                 className="w-full border p-2 rounded"
                 required
               />
+
               <label className="block text-sm font-medium text-gray-700">Jumlah Pemakaian</label>
               <input
                 type="number"
-                placeholder="Jumlah"
+                placeholder="Jumlah Pemakaian"
                 value={form.qty}
                 onChange={(e) => setForm({ ...form, qty: parseFloat(e.target.value) })}
                 className="w-full border p-2 rounded"
                 required
+                min={0}
               />
-              {/* <label className="block text-sm font-medium text-gray-700">Satuan</label>
+
+              <label className="block text-sm font-medium text-gray-700">Jumlah Item</label>
+              <input
+                type="number"
+                placeholder="Jumlah Item"
+                value={form.jumlahItem}
+                onChange={(e) => setForm({ ...form, jumlahItem: parseFloat(e.target.value) })}
+                className="w-full border p-2 rounded"
+                required
+                min={0}
+              />
+
+              <label className="block text-sm font-medium text-gray-700">Harga</label>
+              <input
+                type="number"
+                placeholder="Harga per Item"
+                value={form.harga}
+                onChange={(e) => setForm({ ...form, harga: parseFloat(e.target.value) })}
+                className="w-full border p-2 rounded"
+                required
+                min={0}
+              />
+
+              {/* Jika ingin satuan ditampilkan lagi, aktifkan kembali bagian ini */}
+              {/* 
+              <label className="block text-sm font-medium text-gray-700">Satuan</label>
               <select
                 value={form.satuan}
                 onChange={(e) => setForm({ ...form, satuan: e.target.value })}
@@ -186,7 +241,9 @@ export default function InventoryTable() {
                     {satuan}
                   </option>
                 ))}
-              </select> */}
+              </select>
+              */}
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"

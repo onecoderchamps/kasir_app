@@ -196,6 +196,7 @@ export default function HomeBase() {
                 idTransaction: transactionId
             }];
         });
+
         const newTransaction = {
             id: transactionId,
             date: new Date().toLocaleString(),
@@ -203,17 +204,18 @@ export default function HomeBase() {
             customerPhone,
             treatment: treatmentNames,
             cart: cartWithTransactionId,
-            tip: parseInt(tip),
+            payments: [
+                {
+                    amount:total,
+                    method:selectedPayment
+                }
+            ],
+            retail: [],
             total,
             subtotal,
             coupon,
             discount,
-            paymentMethod: selectedPayment,
-            paymentTipMethod: selectedPayment,
             idOutlet: idOutlet,
-            bank: selectedPayment === 'Transfer' ? selectedBank : selectedPayment === 'EDC' ? selectedEDC : null,
-            cashGiven: selectedPayment === 'Tunai' ? cashGiven : null,
-            change: selectedPayment === 'Tunai' ? change : null,
         };
 
         existingTransactions.push(newTransaction);
@@ -242,26 +244,6 @@ export default function HomeBase() {
     const confirmPayment = () => {
         if (!customerName.trim() || !customerPhone.trim()) {
             alert('Nama pelanggan dan nomor ponsel wajib diisi!');
-            return;
-        }
-
-        if (!selectedPayment) {
-            alert('Pilih metode pembayaran dulu!');
-            return;
-        }
-
-        if (selectedPayment === 'Transfer' && !selectedBank) {
-            alert('Pilih bank dulu!');
-            return;
-        }
-
-        if (selectedPayment === 'Tunai' && (parseInt(cashGiven) < total)) {
-            alert('Uang yang diberikan kurang!');
-            return;
-        }
-
-        if (selectedPayment === 'EDC' && !selectedEDC) {
-            alert('Pilih mesin EDC dulu!');
             return;
         }
 
@@ -784,33 +766,6 @@ export default function HomeBase() {
                                 ))}
                             </select>
                         </div>
-
-                        {/* Input Nomor */}
-                        <div className="mb-6">
-                            <label className="block font-semibold mb-1">TIP:</label>
-                            <input
-                                type="tel"
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-300"
-                                placeholder="Masukkan tip"
-                                value={tip}
-                                onChange={(e) => setTip(e.target.value)}
-                            />
-                        </div>
-
-                        {parseInt(tip) > 0 &&
-                            <><h2 className="text-xl font-bold mb-4">Pilih Metode Pembayaran Tip</h2><div className="space-y-2 mb-6">
-                                <select
-                                    value={selectedTipPayment || ''}
-                                    onChange={(e) => setSelectedTipPayment(e.target.value)}
-                                    className="border p-1 rounded w-full text-sm"
-                                >
-                                    <option value="">Pilih Metode</option>
-                                    {paymentOptions.map((opt, idx) => (
-                                        <option key={idx} value={opt}>{opt}</option>
-                                    ))}
-                                </select>
-                            </div></>
-                        }
 
                         <div className="border-t pt-4 mt-4">
                             <div className="text-lg font-bold text-center">
