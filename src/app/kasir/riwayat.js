@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import { collection, doc, getDoc, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../api/firebase';
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -14,27 +12,20 @@ export default function History() {
     const [staffList, setStaffList] = useState([]);
     const [servicesList, setServicesList] = useState([]);
 
-    // Cek sesi login
     useEffect(() => {
         const uid = localStorage.getItem('uid');
         const loginDate = localStorage.getItem('loginDate');
-
-        if (!uid || !loginDate) {
-            return window.location.href = '/';
-        }
+        if (!uid || !loginDate) return window.location.href = '/';
 
         const today = new Date();
         const login = new Date(loginDate);
-        const sameDay = today.toDateString() === login.toDateString();
-
-        if (!sameDay) {
+        if (today.toDateString() !== login.toDateString()) {
             localStorage.removeItem('uid');
             localStorage.removeItem('loginDate');
             window.location.href = '/';
         }
     }, []);
 
-    // Load data dari localStorage
     useEffect(() => {
         try {
             const saved = JSON.parse(localStorage.getItem('transactions')) || [];
@@ -51,12 +42,10 @@ export default function History() {
         }
     }, []);
 
-    // Simpan transaksi ke Firestore
     const saveTransaksi = async () => {
         const saved = localStorage.getItem('transactions');
         const parsed = JSON.parse(saved || '[]');
         const failed = [];
-
         setLoading(true);
 
         for (const trx of parsed) {
@@ -72,7 +61,6 @@ export default function History() {
                     for (const ingredient of item.ingredients || []) {
                         const ref = doc(db, 'Inventory', ingredient.id);
                         const snap = await getDoc(ref);
-
                         if (snap.exists()) {
                             const currentQty = snap.data().qty || 0;
                             const newQty = Math.max(currentQty - (ingredient.amount * item.qty), 0);
@@ -88,11 +76,9 @@ export default function History() {
 
         localStorage.setItem('transactions', JSON.stringify(failed));
         setTransactions(failed);
-
         alert(failed.length === 0
             ? 'Semua transaksi berhasil disimpan.'
             : `${failed.length} transaksi gagal disimpan. Lihat console untuk detail.`);
-
         setLoading(false);
     };
 
@@ -137,7 +123,6 @@ export default function History() {
     const handleServiceChange = (txId, idx, serviceId) => {
         const service = servicesList.find(s => s.id === serviceId);
         if (!service) return;
-
         const updated = transactions.map(tx => {
             if (tx.id === txId) {
                 const cart = tx.cart.map((item, i) =>
@@ -189,14 +174,6 @@ export default function History() {
         localStorage.setItem('transactions', JSON.stringify(updated));
     };
 
-    const handlePaymentChange = (txId, value) => {
-        const updated = transactions.map(tx =>
-            tx.id === txId ? { ...tx, paymentMethod: value } : tx
-        );
-        setTransactions(updated);
-        localStorage.setItem('transactions', JSON.stringify(updated));
-    };
-
     const paymentOptions = [
         'CASH / TUNAI',
         'EDC BCA - QRIS',
@@ -212,10 +189,77 @@ export default function History() {
         'SPONSOR'
     ];
 
+    const handleAddPayment = (txId) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const payments = tx.payments || [];
+                return { ...tx, payments: [...payments, { method: '', amount: 0 }] };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleChangePayment = (txId, idx, field, value) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const payments = (tx.payments || []).map((p, i) => {
+                    if (i === idx) {
+                        return { ...p, [field]: field === 'amount' ? parseInt(value) || 0 : value };
+                    }
+                    return p;
+                });
+                return { ...tx, payments };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const formatDate = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    };
+
+    const handleAddTransaction = () => {
+        const now = new Date();
+        const newTransaction = {
+            id: Date.now().toString(),
+            date: now.toISOString(),
+            customerName: '',
+            customerPhone: '',
+            cart: [],
+            subtotal: 0,
+            tip: 0,
+            total: 0,
+            payments: [],
+            idOutlet: outlet,
+        };
+
+        const updated = [newTransaction, ...transactions];
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+    const handleDeletePayment = (txId, idx) => {
+        const updated = transactions.map(tx => {
+            if (tx.id === txId) {
+                const payments = (tx.payments || []).filter((_, i) => i !== idx);
+                return { ...tx, payments };
+            }
+            return tx;
+        });
+        setTransactions(updated);
+        localStorage.setItem('transactions', JSON.stringify(updated));
+    };
+
+
     const handlePrintStruk = (tx) => {
         const printWindow = window.open('', '', 'width=400,height=600');
         if (!printWindow) return;
-    
+
         const style = `
             <style>
                 body { font-family: monospace; padding: 20px; font-size: 14px; }
@@ -225,7 +269,7 @@ export default function History() {
                 .treatment { margin-left: 10px; }
             </style>
         `;
-    
+
         let html = `<html><head><title>Struk Transaksi</title>${style}</head><body>`;
         html += `
             <div class="center bold">DSTYLE SALON</div>
@@ -236,54 +280,29 @@ export default function History() {
             <div class="line"></div>
             <div class="bold">TREATMENT</div>
         `;
-    
-        // Dapatkan list nama treatment unik
+
         const uniqueTreatments = [...new Set(tx.cart.map(item => item.name))];
         uniqueTreatments.forEach(name => {
             html += `<div class="treatment">- ${name}</div>`;
         });
-    
+
+        html += `<div class="line"></div><div>Total: <span class="bold">Rp ${tx.total.toLocaleString()}</span></div>`;
+
+        if (tx.payments && tx.payments.length > 0) {
+            tx.payments.forEach(p => {
+                html += `<div>${p.method}: Rp ${p.amount.toLocaleString()}</div>`;
+            });
+        }
+
         html += `
             <div class="line"></div>
-            <div>Total: <span class="bold">Rp ${tx.total.toLocaleString()}</span></div>
-            <div>Metode: ${tx.paymentMethod || '-'}</div>
-            <div class="line"></div>
             <div class="center">Terima Kasih!</div>
-        `;
-    
-        html += `</body></html>`;
-    
+        </body></html>`;
+
         printWindow.document.write(html);
         printWindow.document.close();
         printWindow.focus();
         printWindow.print();
-    };
-    
-    
-
-    const formatDate = (date) => {
-        const d = new Date(date);
-        return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-    };
-
-    const handleAddTransaction = () => {
-        const now = new Date();
-        const newTransaction = {
-            id: Date.now().toString(), // gunakan timestamp unik sebagai ID
-            date: now.toISOString(),
-            customerName: '',
-            customerPhone: '',
-            paymentMethod: '',
-            cart: [],
-            subtotal: 0,
-            tip: 0,
-            total: 0,
-            idOutlet: outlet,
-        };
-
-        const updated = [newTransaction, ...transactions];
-        setTransactions(updated);
-        localStorage.setItem('transactions', JSON.stringify(updated));
     };
 
     return (
@@ -316,9 +335,9 @@ export default function History() {
                                 <th className="border p-2">Customer</th>
                                 <th className="border p-2">No Hp</th>
                                 <th className="border p-2">Treatment & Staff</th>
-                                <th className="border p-2">Tip</th>
                                 <th className="border p-2">Total</th>
-                                <th className="border p-2">Metode</th>
+                                <th className="border p-2">Pembayaran</th>
+                                <th className="border p-2">Tip</th>
                                 <th className="border p-2">Aksi</th>
                             </tr>
                         </thead>
@@ -362,38 +381,41 @@ export default function History() {
                                             </li>
                                         </ul>
                                     </td>
+                                    <td className="border p-2">Rp {tx.total.toLocaleString()}</td>
+                                    <td className="border p-2">
+                                        <ul className="space-y-1">
+                                            {(tx.payments || []).map((p, i) => (
+                                                <li key={i} className="flex gap-1">
+                                                    <select value={p.method} onChange={(e) => handleChangePayment(tx.id, i, 'method', e.target.value)} className="border p-1 rounded w-40 text-sm">
+                                                        <option value="">Pilih Metode</option>
+                                                        {paymentOptions.map((opt, idx) => (
+                                                            <option key={idx} value={opt}>{opt}</option>
+                                                        ))}
+                                                    </select>
+                                                    <input type="number" value={p.amount} onChange={(e) => handleChangePayment(tx.id, i, 'amount', e.target.value)} className="border px-2 py-1 w-24 rounded" />
+                                                    <button onClick={() => handleDeletePayment(tx.id, i)} className="text-red-500 hover:text-red-700">
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </li>
+                                            ))}
+                                            <li>
+                                                <button onClick={() => handleAddPayment(tx.id)} className="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                                                    <PlusIcon className="w-4 h-4 mr-1" /> Tambah Pembayaran
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </td>
                                     <td className="border p-2">
                                         <input type="number" value={tx.tip || 0} onChange={(e) => handleFieldChange(tx.id, 'tip', e.target.value)} className="border px-2 py-1 w-24 rounded" />
                                     </td>
-                                    <td className="border p-2">Rp {tx.total.toLocaleString()}</td>
-                                    <td className="border p-2">
-                                        <select
-                                            value={tx.paymentMethod || ''}
-                                            onChange={(e) => handlePaymentChange(tx.id, e.target.value)}
-                                            className="border p-1 rounded w-full text-sm"
-                                        >
-                                            <option value="">Pilih Metode</option>
-                                            {paymentOptions.map((opt, idx) => (
-                                                <option key={idx} value={opt}>{opt}</option>
-                                            ))}
-                                        </select>
-                                    </td>
                                     <td className="border p-2 text-center">
-                                        <button
-                                            onClick={() => handlePrintStruk(tx)}
-                                            className="text-blue-600 hover:text-blue-800"
-                                        >
+                                        <button onClick={() => handlePrintStruk(tx)} className="text-blue-600 hover:text-blue-800">
                                             <PrinterIcon className="w-8 h-8 inline" />
                                         </button>
-                                        <button
-                                            onClick={() => handleDeleteTransaction(tx.id)}
-                                            className="text-red-600 hover:text-red-800"
-                                            title="Hapus Transaksi"
-                                        >
+                                        <button onClick={() => handleDeleteTransaction(tx.id)} className="text-red-600 hover:text-red-800">
                                             <TrashIcon className="w-8 h-8 inline" />
                                         </button>
                                     </td>
-
                                 </tr>
                             ))}
                         </tbody>

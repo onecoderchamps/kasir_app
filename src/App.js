@@ -26,7 +26,6 @@ function App() {
         <Route path="/setting" element={<HomePage />} />
         <Route path="/history" element={<History />} />
         <Route path="/settingKasir" element={<AdminKasir />} />
-
       </Routes>
     </BrowserRouter>
   );
