@@ -13,21 +13,25 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../api/firebase';
 
-const idOutlet = localStorage.getItem('idOutlet');
-
+const idOutlet = typeof window !== 'undefined' ? localStorage.getItem('idOutlet') : null;
 
 export default function CategoryTable() {
-  const [outlets, setOutlets] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({
-    name: '',
-    bg: 'bg-blue-400',
-    createdAt: new Date(),
-  });
+  const [form, setForm] = useState(initialForm());
+
+  function initialForm() {
+    return {
+      name: '',
+      bg: 'bg-blue-400',
+      target: 0,
+      createdAt: new Date(),
+    };
+  }
 
   useEffect(() => {
-    fetchData();
+    if (idOutlet) fetchData();
   }, []);
 
   const fetchData = async () => {
@@ -38,17 +42,21 @@ export default function CategoryTable() {
         id: doc.id,
         ...doc.data(),
       }))
-      .sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
-    setOutlets(result);
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt?.toDate?.() || a.createdAt) -
+          new Date(b.createdAt?.toDate?.() || b.createdAt)
+      );
+    setCategories(result);
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const { name, bg, target } = form;
+
     if (editId) {
-      const { name, bg } = form; // exclude createdAt
-      await updateDoc(doc(db, 'Category', editId), { name, bg });
+      await updateDoc(doc(db, 'Category', editId), { name, bg, target });
     } else {
       await addDoc(collection(db, 'Category'), {
         ...form,
@@ -57,19 +65,12 @@ export default function CategoryTable() {
       });
     }
 
-    setForm({
-      name: '',
-      bg: 'bg-blue-400',
-      createdAt: new Date(),
-    });
-    setEditId(null);
-    setIsModalOpen(false);
+    resetForm();
     fetchData();
   };
 
-
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Apakah Anda yakin ingin menghapus outlet ini?');
+    const confirmDelete = window.confirm('Apakah Anda yakin ingin menghapus kategori ini?');
     if (!confirmDelete) return;
 
     await deleteDoc(doc(db, 'Category', id));
@@ -77,54 +78,55 @@ export default function CategoryTable() {
   };
 
   const handleEdit = (item) => {
-    setForm(item);
+    setForm({
+      name: item.name || '',
+      bg: item.bg || 'bg-blue-400',
+      target: item.target || 0,
+      createdAt: item.createdAt || new Date(),
+    });
     setEditId(item.id);
     setIsModalOpen(true);
   };
 
-  const openNewModal = () => {
-    setForm({
-      name: '',
-      bg: 'bg-blue-400',
-      createdAt: new Date(),
-    });
+  const resetForm = () => {
+    setForm(initialForm());
     setEditId(null);
-    setIsModalOpen(true);
+    setIsModalOpen(false);
   };
 
   return (
     <div className="mx-auto h-screen">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Manajemen Kategory</h2>
+        <h2 className="text-xl font-bold">Manajemen Kategori</h2>
         <button
-          onClick={openNewModal}
+          onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Tambah Kategori
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="overflow-y-auto">
         <table className="w-full border table-auto text-sm">
           <thead>
             <tr className="bg-gray-100">
               <th className="p-2 border">Nama</th>
-              {/* <th className="p-2 border">Latar Belakang</th> */}
+              <th className="p-2 border">Target</th>
               <th className="p-2 border">Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {outlets.length === 0 ? (
+            {categories.length === 0 ? (
               <tr>
                 <td colSpan="3" className="p-4 text-center text-gray-500">
                   Belum ada kategori. Silakan tambahkan data.
                 </td>
               </tr>
             ) : (
-              outlets.map((item) => (
+              categories.map((item) => (
                 <tr key={item.id} className="text-center">
                   <td className="border p-2">{item.name}</td>
-                  {/* <td className="border p-2">{item.bg}</td> */}
+                  <td className="border p-2">Rp {item.target.toLocaleString('id-ID')}</td>
                   <td className="border p-2 space-x-2">
                     <button
                       onClick={() => handleEdit(item)}
@@ -150,29 +152,42 @@ export default function CategoryTable() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-bold mb-4">{editId ? 'Edit' : 'Tambah'} Kategori</h3>
+            <h3 className="text-lg font-bold mb-4">
+              {editId ? 'Edit' : 'Tambah'} Kategori
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <label className="block text-sm font-medium text-gray-700">Nama</label>
-              <input
-                type="text"
-                placeholder="Nama Kategori"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border p-2 rounded"
-                required
-              />
-              {/* <input
-                type="text"
-                placeholder="Latar Belakang (contoh: bg-blue-400)"
-                value={form.bg}
-                onChange={(e) => setForm({ ...form, bg: e.target.value })}
-                className="w-full border p-2 rounded"
-                required
-              /> */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nama</label>
+                <input
+                  type="text"
+                  placeholder="Nama Kategori"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full border p-2 rounded"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Target</label>
+                <input
+                  type="text"
+                  placeholder="Target (contoh: 10.000)"
+                  value={form.target.toLocaleString('id-ID')}
+                  onChange={(e) => {
+                    // Hapus karakter selain angka
+                    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                    // Parse ke number, default 0 jika kosong
+                    const numberValue = rawValue ? parseInt(rawValue, 10) : 0;
+                    setForm({ ...form, target: numberValue });
+                  }}
+                  className="w-full border p-2 rounded"
+                  required
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={resetForm}
                   className="px-4 py-2 rounded border border-gray-400"
                 >
                   Batal

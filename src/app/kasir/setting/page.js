@@ -4,12 +4,15 @@ import CategoryTable from "./category";
 import OutletTable from "./outlet";
 import ServiceTable from "./layanan";
 import InventoryTable from "./inventory";
+import Dashboard from "./dashboard";
+
 import Omset from "./omset";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../api/firebase";
 import Absensi from "./absensi";
 
 const menuItems = [
+    "Dashboard", 
     "Laporan Absensi", 
     "Laporan Omzet",
     "Kategori Layanan", 
@@ -19,7 +22,7 @@ const menuItems = [
 ];
 
 export default function HomePage() {
-    const [active, setActive] = useState("Laporan Absensi");
+    const [active, setActive] = useState("Dashboard");
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -77,6 +80,8 @@ export default function HomePage() {
 
     const renderContent = () => {
         switch (active) {
+            case "Dashboard":
+                return <Dashboard />;
             case "Laporan Absensi":
                 return <Absensi />;
             case "Kategori Layanan":
