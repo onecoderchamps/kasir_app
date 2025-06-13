@@ -150,12 +150,12 @@ export default function TherapistTable() {
   return (
     <div className="mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Manajemen Terapis</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Manajemen Karyawan</h2>
         <button
           onClick={openNewModal}
           className="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 transition"
         >
-          + Tambah Terapis
+          + Tambah Karyawan
         </button>
       </div>
 
@@ -182,7 +182,7 @@ export default function TherapistTable() {
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   {filteredTherapists.length === 0 ? (
                     <div className="text-center text-gray-400 col-span-full">
-                      Tidak ada terapis di outlet ini.
+                      Tidak ada Karyawan di outlet ini.
                     </div>
                   ) : (
                     filteredTherapists.map((item) => (
@@ -225,11 +225,11 @@ export default function TherapistTable() {
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 transition">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg animate-fade-in">
             <h3 className="text-xl font-bold mb-4">
-              {editId ? 'Edit Terapis' : 'Tambah Terapis'}
+              {editId ? 'Edit Karyawan' : 'Tambah Karyawan'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Nama Terapis</label>
+                <label className="block text-sm font-medium text-gray-700">Nama Karyawan</label>
                 <input
                   type="text"
                   value={form.name}

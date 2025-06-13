@@ -17,7 +17,7 @@ const menuItems = [
     "Laporan Omset",
     "Laporan Absensi",
     "Outlet",
-    "Terapis",
+    "Karyawan",
     "Kasir"
 ];
 
@@ -86,7 +86,7 @@ export default function HomePage() {
                 return <App />;
             case "Dashboard":
                 return <Dashboard />;
-            case "Terapis":
+            case "Karyawan":
                 return <TerapisTable />;
             case "Outlet":
                 return <OutletTable />;

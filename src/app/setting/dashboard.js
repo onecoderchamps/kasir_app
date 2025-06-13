@@ -99,7 +99,7 @@ export default function Dashboard() {
       {/* Data Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-4 border rounded shadow">
-          <h2 className="font-semibold text-lg">Total Terapis</h2>
+          <h2 className="font-semibold text-lg">Total Karyawan</h2>
           <p className="text-3xl">{totalTerapis}</p>
         </div>
         <div className="p-4 border rounded shadow">

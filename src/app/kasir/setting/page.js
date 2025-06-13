@@ -18,7 +18,7 @@ const menuItems = [
     "Kategori Layanan", 
     "Layanan",
     "Inventory", 
-    "Terapis"
+    "Karyawan"
 ];
 
 export default function HomePage() {
@@ -88,7 +88,7 @@ export default function HomePage() {
                 return <CategoryTable />;
             case "Layanan":
                 return <ServiceTable />
-            case "Terapis":
+            case "Karyawan":
                 return <TerapisTable />;
             case "Outlet":
                 return <OutletTable />;

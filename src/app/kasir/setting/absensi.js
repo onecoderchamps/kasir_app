@@ -198,7 +198,7 @@ function App() {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
-      <h1 className="text-2xl font-bold mb-4">Rekap Absensi Terapis</h1>
+      <h1 className="text-2xl font-bold mb-4">Rekap Absensi Karyawan</h1>
 
       <div className="flex gap-4 mb-6">
         <div>
@@ -282,7 +282,7 @@ function App() {
               &times;
             </button>
             <h2 className="text-xl font-bold mb-4">Detail Absensi</h2>
-            <p><strong>Nama Terapis:</strong> {modalData.name}</p>
+            <p><strong>Nama Karyawan:</strong> {modalData.name}</p>
             <p><strong>Tanggal:</strong> {modalData.tanggal}</p>
             <p><strong>Status:</strong> {modalData.status}</p>
             {modalData.jamMasuk && (
