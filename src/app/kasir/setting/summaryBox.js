@@ -22,23 +22,16 @@ const paymentOptions = [
 const idOutlet = localStorage.getItem('idOutlet');
 
 const SummaryBox = () => {
-    const [tanggal, setTanggal] = useState(() => {
-        const today = new Date();
-        return today.toISOString().split('T')[0]; // Format: yyyy-mm-dd
-    });
+    const [tanggal, setTanggal] = useState(() => new Date().toISOString().split('T')[0]);
     const [setor, setSetor] = useState(0);
     const [target, setTarget] = useState(0);
     const [retail, setRetail] = useState(0);
-
     const [updateTotal, setUpdateTotal] = useState(0);
     const [selectedCategory, setSelectedCategory] = useState('');
-
-
     const [transactions, setTransactions] = useState([]);
     const [category, setCategory] = useState([]);
     const [startDate, setStartDate] = useState(() => localStorage.getItem('dashboardStartDate') || '');
     const [endDate, setEndDate] = useState(() => localStorage.getItem('dashboardEndDate') || '');
-
 
     const fetchTarget = async () => {
         const categoryRef = collection(db, 'Category');
@@ -48,16 +41,19 @@ const SummaryBox = () => {
             id: doc.id,
             ...doc.data(),
         }));
+        console.log('Category Data:', result);
         setCategory(result);
     };
 
     const fetchData = async () => {
+        if (!startDate || !endDate || !selectedCategory) return;
+
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        let transaksiQuery = query(
+        const transaksiQuery = query(
             collection(db, 'Transaksi'),
             where('date', '>=', Timestamp.fromDate(start)),
             where('date', '<=', Timestamp.fromDate(end)),
@@ -69,29 +65,38 @@ const SummaryBox = () => {
             id: doc.id,
             ...doc.data(),
         }));
-        const filteringAll = result.filter((trx) => trx.cart[0].idCategory === selectedCategory);
+        console.log('Transactions Data:', result);
 
-        const filteringCart = filteringAll.map((trx) => trx.cart);
-        const mergedArray = filteringCart.flat();
-        const filteredArray = mergedArray.filter((item) => item.idCategory === selectedCategory)
+        const filteringAll = result.filter(
+            (trx) => Array.isArray(trx.cart) && trx.cart[0]?.idCategory === selectedCategory
+        );
+
+        const mergedCart = filteringAll.flatMap((trx) =>
+            (trx.cart || []).filter((item) => item?.idCategory === selectedCategory)
+        );
+
+        const mergedRetail = filteringAll.flatMap((trx) => trx.retail || []);
+        const retailAll = mergedRetail.reduce(
+            (acc, item) => acc + ((item?.harga || 0) - (item?.komisi || 0)),
+            0
+        );
+
+        const TotalAll = mergedCart.reduce((acc, item) => acc + (item?.price || 0), 0);
         const categoryTarget = category.find((cat) => cat.id === selectedCategory);
 
-        const filteringRetail = filteringAll.map((trx) => trx.retail);
-        const mergedArrayRetail = filteringRetail.flat();
-
-        const retailAll = mergedArrayRetail.reduce((acc, item) => acc + (item.harga - item.komisi || 0), 0)
-        const TotalAll = filteredArray.reduce((acc, item) => acc + (item.price || 0), 0)
-
-        setTarget(categoryTarget.target);
+        setTarget(categoryTarget?.target || 0);
         setRetail(retailAll);
         setUpdateTotal(TotalAll + retailAll);
-
         setTransactions(filteringAll);
     };
 
     useEffect(() => {
         fetchTarget();
-        // fetchData();
+    }, [startDate, endDate]);
+
+    useEffect(() => {
+        localStorage.setItem('dashboardStartDate', startDate || '');
+        localStorage.setItem('dashboardEndDate', endDate || '');
     }, [startDate, endDate]);
 
     const formatRupiah = (number) =>
@@ -105,17 +110,14 @@ const SummaryBox = () => {
     let totalHariIni = 0;
 
     transactions.forEach((trx) => {
-        trx.payments.forEach((p) => {
+        (trx.payments || []).forEach((p) => {
             const matched = paymentOptions.find(
-                (opt) => opt.toLowerCase() === p.method.toLowerCase()
+                (opt) => opt.toLowerCase() === (p.method || '').toLowerCase()
             );
-
             if (matched) {
-                paymentTotals[matched] += p.amount;
-
-                // Hanya tambahkan ke totalHariIni jika bukan tip
+                paymentTotals[matched] += p.amount || 0;
                 if (matched !== 'TIP Cash' && matched !== 'TIP Transfer') {
-                    totalHariIni += p.amount;
+                    totalHariIni += p.amount || 0;
                 }
             }
         });
@@ -123,15 +125,7 @@ const SummaryBox = () => {
 
     const sisaCash = paymentTotals['CASH / TUNAI'] - setor;
     const kekurangan = target - updateTotal;
-    const persentase = ((updateTotal / target) * 100).toFixed(2);
-
-    useEffect(() => {
-        if (startDate) localStorage.setItem('dashboardStartDate', startDate);
-        else localStorage.removeItem('dashboardStartDate');
-
-        if (endDate) localStorage.setItem('dashboardEndDate', endDate);
-        else localStorage.removeItem('dashboardEndDate');
-    }, [startDate, endDate]);
+    const persentase = target ? ((updateTotal / target) * 100).toFixed(2) : '0.00';
 
     return (
         <div className="p-6 bg-white rounded-2xl shadow-lg space-y-4">
@@ -161,6 +155,7 @@ const SummaryBox = () => {
                         onChange={(e) => setSelectedCategory(e.target.value)}
                         className="border p-2 rounded"
                     >
+                        <option value="">-- Pilih Kategori --</option>
                         {category.map((cat) => (
                             <option key={cat.id} value={cat.id}>
                                 {cat.name}
@@ -180,15 +175,17 @@ const SummaryBox = () => {
                 </div>
                 <button
                     className="bg-red-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    onClick={() => {
-                        fetchData();
-                    }}
+                    onClick={fetchData}
                 >
                     Cari
                 </button>
             </div>
-            <div>TARGET / Hari = {formatRupiah((target/31).toFixed(0))}</div>
-            <div className=" pt-4 border-t grid grid-cols-2 gap-3 font-medium">
+
+            {target > 0 && (
+                <div>TARGET / Hari = {formatRupiah(Math.floor(target / 31))}</div>
+            )}
+
+            <div className="pt-4 border-t grid grid-cols-2 gap-3 font-medium">
                 {paymentOptions.map((method) => (
                     <div key={method}>
                         {method} = {paymentTotals[method] ? formatRupiah(paymentTotals[method]) : '-'}

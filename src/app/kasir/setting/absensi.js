@@ -158,8 +158,13 @@ function App() {
                   <option value="" disabled>Pilih</option>
                   <option value="Izin">Izin</option>
                   <option value="Sakit">Sakit</option>
-                  <option value="Absen">Absen</option>
-                  <option value="Cuti">Cuti</option>
+                  <option value="OFFDAY">OFF DAY</option>
+                  <option value="RAPPELOFF">RAPPEL OFF</option>
+                  <option value="SAKITMC">SAKIT MC</option>
+                  <option value="IZINWEEKDAY">IZIN WEEKDAY</option>
+                  <option value="IZINWEEKEND">IZIN WEEKEND</option>
+                  <option value="ALPA">ALPA</option>
+
                 </select>
                 {denda > 0 && (
                   <div className="text-red-600 font-semibold mt-1">Denda: Rp {denda.toLocaleString()}</div>
@@ -177,8 +182,12 @@ function App() {
               <option value="" disabled>Pilih</option>
               <option value="Izin">Izin</option>
               <option value="Sakit">Sakit</option>
-              <option value="Absen">Absen</option>
-              <option value="Cuti">Cuti</option>
+              <option value="OFFDAY">OFF DAY</option>
+              <option value="RAPPELOFF">RAPPEL OFF</option>
+              <option value="SAKITMC">SAKIT MC</option>
+              <option value="IZINWEEKDAY">IZIN WEEKDAY</option>
+              <option value="IZINWEEKEND">IZIN WEEKEND</option>
+              <option value="ALPA">ALPA</option>
             </select>
           );
         }
