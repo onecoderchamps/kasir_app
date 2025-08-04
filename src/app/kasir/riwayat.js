@@ -326,7 +326,11 @@ export default function History() {
     };
 
 
-    const handlePrintStruk = (tx) => {
+    const handlePrintStruk = async (tx) => {
+        var idoutlet = localStorage.getItem('idOutlet')
+        const ref = doc(db, 'Outlet', idoutlet);
+        const snap = await getDoc(ref);
+        const namaOutlet = snap.data().nama
         const printWindow = window.open('', '', 'width=400,height=600');
         if (!printWindow) return;
 
@@ -343,6 +347,8 @@ export default function History() {
         let html = `<html><head><title>Struk Transaksi</title>${style}</head><body>`;
         html += `
             <div class="center bold">DSTYLE SALON</div>
+            <div class="center bold">Outlet ${namaOutlet}</div>
+
             <div class="center">${formatDate(tx.date)}</div>
             <div class="line"></div>
             <div>Nama: ${tx.customerName || '-'}</div>

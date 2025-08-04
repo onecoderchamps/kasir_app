@@ -10,11 +10,13 @@ import Omset from "./omset";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../api/firebase";
 import Absensi from "./absensi";
+import RetailReport from "./retail";
 
 const menuItems = [
     "Dashboard", 
     "Laporan Absensi", 
     "Laporan Omzet",
+    "Laporan Retail",
     "Kategori Layanan", 
     "Layanan",
     "Inventory", 
@@ -96,6 +98,8 @@ export default function HomePage() {
                 return <InventoryTable />;
             case "Laporan Omzet":
                 return <Omset />;
+            case "Laporan Retail":
+                return <RetailReport />;
             case "Bank":
                 return <p>Ini adalah konten untuk <strong>Bank</strong>.</p>;
             default:
