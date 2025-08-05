@@ -228,7 +228,7 @@ export default function AbsensiPage() {
       formData.append('file', blob, 'absen.jpg');
 
       const response = await fetch(
-        'https://backendtrasgo-609517395039.asia-southeast1.run.app/api/v1/file/upload',
+        'https://apiimpact.coderchamps.co.id/api/v1/file/upload',
         {
           method: 'POST',
           body: formData,
