@@ -22,7 +22,6 @@ const paymentOptions = [
 const idOutlet = localStorage.getItem('idOutlet');
 
 const SummaryBox = () => {
-    const [tanggal, setTanggal] = useState(() => new Date().toISOString().split('T')[0]);
     const [setor, setSetor] = useState(0);
     const [target, setTarget] = useState(0);
     const [retail, setRetail] = useState(0);
@@ -32,71 +31,97 @@ const SummaryBox = () => {
     const [category, setCategory] = useState([]);
     const [startDate, setStartDate] = useState(() => localStorage.getItem('dashboardStartDate') || '');
     const [endDate, setEndDate] = useState(() => localStorage.getItem('dashboardEndDate') || '');
+    const [loading, setLoading] = useState(false);
 
-    const fetchTarget = async () => {
-        const categoryRef = collection(db, 'Category');
-        const q = query(categoryRef, where('idOutlet', '==', idOutlet));
-        const querySnapshot = await getDocs(q);
-        const result = querySnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-        }));
-        console.log('Category Data:', result);
-        setCategory(result);
-    };
-
-    const fetchData = async () => {
-        if (!startDate || !endDate || !selectedCategory) return;
-
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-
-        const transaksiQuery = query(
-            collection(db, 'Transaksi'),
-            where('date', '>=', Timestamp.fromDate(start)),
-            where('date', '<=', Timestamp.fromDate(end)),
-            where('idOutlet', '==', idOutlet)
-        );
-
-        const transaksisnap = await getDocs(transaksiQuery);
-        const result = transaksisnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-        }));
-        console.log('Transactions Data:', result);
-
-        const filteringAll = result.filter(
-            (trx) => Array.isArray(trx.cart) && trx.cart[0]?.idCategory === selectedCategory
-        );
-
-        const mergedCart = filteringAll.flatMap((trx) =>
-            (trx.cart || []).filter((item) => item?.idCategory === selectedCategory)
-        );
-
-        const mergedRetail = filteringAll.flatMap((trx) => trx.retail || []);
-        const retailAll = mergedRetail.reduce(
-            (acc, item) => acc + ((item?.harga || 0) - (item?.komisi || 0)),
-            0
-        );
-
-        const TotalAll = mergedCart.reduce((acc, item) => acc + (item?.price || 0), 0);
-        const categoryTarget = category.find((cat) => cat.id === selectedCategory);
-
-        setTarget(categoryTarget?.target || 0);
-        setRetail(retailAll);
-        setUpdateTotal(TotalAll + retailAll);
-        setTransactions(filteringAll);
-    };
-
+    // Fetch categories on component mount
     useEffect(() => {
-        fetchTarget();
-    }, [startDate, endDate]);
+        const fetchCategories = async () => {
+            if (!idOutlet) return;
+            try {
+                const categoryRef = collection(db, 'Category');
+                const q = query(categoryRef, where('idOutlet', '==', idOutlet));
+                const querySnapshot = await getDocs(q);
+                const result = querySnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setCategory(result);
+                // Set initial category to the first one if available
+                if (result.length > 0) {
+                    setSelectedCategory(result[0].id);
+                }
+            } catch (error) {
+                console.error("Error fetching categories:", error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
+    // Fetch and process data whenever filters change
     useEffect(() => {
-        localStorage.setItem('dashboardStartDate', startDate || '');
-        localStorage.setItem('dashboardEndDate', endDate || '');
+        const fetchData = async () => {
+            if (!startDate || !endDate || !selectedCategory) return;
+            
+            setLoading(true);
+
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+
+            try {
+                const transaksiQuery = query(
+                    collection(db, 'Transaksi'),
+                    where('date', '>=', Timestamp.fromDate(start)),
+                    where('date', '<=', Timestamp.fromDate(end)),
+                    where('idOutlet', '==', idOutlet)
+                );
+                
+                const transaksisnap = await getDocs(transaksiQuery);
+                const result = transaksisnap.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+
+                const filteringAll = result.filter(
+                    (trx) => trx.cart?.some(item => item.idCategory === selectedCategory)
+                );
+                
+                // Get the target for the selected category
+                const categoryTarget = category.find((cat) => cat.id === selectedCategory);
+                setTarget(categoryTarget?.target || 0);
+
+                // Calculate totals from filtered transactions
+                let totalRetail = 0;
+                let totalCart = 0;
+                
+                filteringAll.forEach(trx => {
+                    const retailItems = (trx.retail || []).filter(item => item.barangId);
+                    totalRetail += retailItems.reduce((acc, item) => acc + (item?.harga || 0), 0);
+
+                    const cartItems = (trx.cart || []).filter(item => item.idCategory === selectedCategory);
+                    totalCart += cartItems.reduce((acc, item) => acc + (item?.price || 0), 0);
+                });
+                
+                setRetail(totalRetail);
+                setUpdateTotal(totalCart + totalRetail);
+                setTransactions(filteringAll);
+
+            } catch (error) {
+                console.error("Error fetching transactions:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        
+    }, [startDate, endDate, selectedCategory, category]);
+
+    // Store dates in local storage
+    useEffect(() => {
+        if (startDate) localStorage.setItem('dashboardStartDate', startDate);
+        if (endDate) localStorage.setItem('dashboardEndDate', endDate);
     }, [startDate, endDate]);
 
     const formatRupiah = (number) =>
@@ -106,7 +131,11 @@ const SummaryBox = () => {
             minimumFractionDigits: 0,
         }).format(number);
 
-    const paymentTotals = Object.fromEntries(paymentOptions.map((p) => [p, 0]));
+    const paymentTotals = paymentOptions.reduce((acc, option) => {
+        acc[option] = 0;
+        return acc;
+    }, {});
+    
     let totalHariIni = 0;
 
     transactions.forEach((trx) => {
@@ -116,15 +145,15 @@ const SummaryBox = () => {
             );
             if (matched) {
                 paymentTotals[matched] += p.amount || 0;
-                if (matched !== 'TIP Cash' && matched !== 'TIP Transfer') {
+                if (!matched.startsWith('TIP')) {
                     totalHariIni += p.amount || 0;
                 }
             }
         });
     });
 
-    const sisaCash = paymentTotals['CASH / TUNAI'] - setor;
-    const kekurangan = target - updateTotal;
+    const sisaCash = (paymentTotals['CASH / TUNAI'] || 0) - setor;
+    const kekurangan = target > updateTotal ? target - updateTotal : 0;
     const persentase = target ? ((updateTotal / target) * 100).toFixed(2) : '0.00';
 
     return (
@@ -174,10 +203,17 @@ const SummaryBox = () => {
                     />
                 </div>
                 <button
-                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    onClick={fetchData}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                    onClick={() => {
+                        // This button is no longer strictly necessary but can be used for manual refetch
+                        // You can remove it and the onClick handler entirely for a fully automatic experience
+                        if (startDate && endDate && selectedCategory) {
+                             // Just a manual trigger
+                        }
+                    }}
+                    disabled={loading}
                 >
-                    Cari
+                    {loading ? 'Memuat...' : 'Cari'}
                 </button>
             </div>
 
